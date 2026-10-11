@@ -1,0 +1,57 @@
+name: C1 independent foundation
+
+on:
+  push:
+    branches: [pskernel-c1]
+    paths:
+      - 'independent/**'
+      - 'scripts/c1-independent-audit.py'
+      - '.github/workflows/c1-independent.yml'
+      - 'lean-toolchain'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: c1-independent-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  proof-and-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Lean
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Record source and toolchain
+        run: |
+          mkdir -p _tmp/c1-next
+          git rev-parse HEAD | tee _tmp/c1-next/independent-revision.txt
+          lean --version | tee _tmp/c1-next/independent-toolchain.txt
+      - name: Independent import and trust fence
+        run: python3 scripts/c1-independent-audit.py
+      - name: Build independent proofs and regression tests first
+        working-directory: independent
+        run: |
+          set -euo pipefail
+          lake build 2>&1 | tee ../_tmp/c1-next/independent-build.log
+          lake test 2>&1 | tee ../_tmp/c1-next/independent-tests.log
+          lake env lean PskernelC1IndependentTests.lean 2>&1 | tee ../_tmp/c1-next/independent-axioms.log
+          if grep -n 'warning:' ../_tmp/c1-next/independent-{build,tests,axioms}.log; then
+            echo '::error::Independent proof/test build must be warning-free.'
+            exit 1
+          fi
+      - name: Audit all eleven named theorem dependencies
+        run: python3 scripts/c1-independent-audit.py --axioms _tmp/c1-next/independent-axioms.log
+      - name: Publish proof evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c1-independent-${{ github.sha }}
+          path: _tmp/c1-next
+          if-no-files-found: error
