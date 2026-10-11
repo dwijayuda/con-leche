@@ -20,6 +20,9 @@ CAPSTONES = BASE_CAPSTONES | POLYNOMIAL_CAPSTONES
 PREFIX = 'PskernelC1Independent.Level.'
 CODEC_PREFIX = 'PskernelC1Independent.NameCodec.'
 CODEC_CAPSTONES = {'get?_mem', 'index?_sound', 'index?_complete', 'index?_none_iff', 'index?_injective', 'index?_append_left'}
+# Observed on 2026-10-12 in source run 38178205029: these are exact, not merely an allowlist.
+CODEC_EXPECTED_AXIOMS = {short: ['propext'] for short in CODEC_CAPSTONES}
+CODEC_EXPECTED_AXIOMS['index?_append_left'] = sorted(['propext', 'Quot.sound'])
 ALLOWED_AXIOMS = {'propext', 'Classical.choice', 'Quot.sound'}
 EXPECTED_AXIOMS = {name: ['propext'] for name in BASE_CAPSTONES}
 EXPECTED_AXIOMS['eval_maxSmart'] = sorted(['propext', 'Quot.sound'])
@@ -120,6 +123,9 @@ def audit_axioms(log: str) -> dict[str, list[str]]:
     for short, axioms in EXPECTED_AXIOMS.items():
         if seen[PREFIX + short] != axioms:
             raise ValueError(f'changed axiom footprint: {short}: {seen[PREFIX + short]}')
+    for short, axioms in CODEC_EXPECTED_AXIOMS.items():
+        if seen[CODEC_PREFIX + short] != axioms:
+            raise ValueError(f'changed source-name codec axiom footprint: {short}: {seen[CODEC_PREFIX + short]}')
     return seen
 
 

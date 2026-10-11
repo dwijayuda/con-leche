@@ -60,3 +60,11 @@ example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
 #print axioms comparePolynomial_different
 #print axioms comparePolynomial_complete
 #print axioms comparePolynomial_decides
+
+-- The whole independent package's axiom census lives at one root.
+#print axioms PskernelC1Independent.NameCodec.get?_mem
+#print axioms PskernelC1Independent.NameCodec.index?_sound
+#print axioms PskernelC1Independent.NameCodec.index?_complete
+#print axioms PskernelC1Independent.NameCodec.index?_none_iff
+#print axioms PskernelC1Independent.NameCodec.index?_injective
+#print axioms PskernelC1Independent.NameCodec.index?_append_left

@@ -26,9 +26,3 @@ example {α : Type} [DecidableEq α] (table more : List α) (value : α)
     NameCodec.index? (table ++ more) value = some id :=
   NameCodec.index?_append_left table more value id h
 
-#print axioms PskernelC1Independent.NameCodec.get?_mem
-#print axioms PskernelC1Independent.NameCodec.index?_sound
-#print axioms PskernelC1Independent.NameCodec.index?_complete
-#print axioms PskernelC1Independent.NameCodec.index?_none_iff
-#print axioms PskernelC1Independent.NameCodec.index?_injective
-#print axioms PskernelC1Independent.NameCodec.index?_append_left
