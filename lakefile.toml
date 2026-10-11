@@ -1,7 +1,24 @@
 name = "con-leche"
 defaultTargets = ["ConLecheBase", "ConLecheModel", "ConLecheCaps", "ConLecheComplete",
-                  "con-leche"]
+                  "con-leche", "PskernelC1Proof"]
 testDriver = "ConLecheTests"
+
+# C1 first establishes the concrete acceptance contract and its inherited
+# set-model proof. The runtime target imports neither the model nor this
+# capstone library. Build only `pskernel-c1` when a checker binary is wanted;
+# the ordinary default build also checks the proof.
+[[lean_lib]]
+name = "PskernelC1"
+roots = ["PskernelC1.Kernel"]
+
+[[lean_lib]]
+name = "PskernelC1Proof"
+roots = ["PskernelC1.Soundness"]
+
+[[lean_lib]]
+name = "PskernelC1Tests"
+srcDir = "tests"
+roots = ["PskernelC1Tests.Axioms"]
 
 # NO DEPENDENCIES (task #207).  The package requires nothing: the
 # `lean_inductive_models` preprocessor — its `require`, the
