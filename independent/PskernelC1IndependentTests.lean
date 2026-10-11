@@ -1,6 +1,6 @@
 module
 
-import PskernelC1Independent.UniverseProofs
+import PskernelC1Independent.UniversePolynomialProofs
 import PskernelC1Independent.PolynomialTests
 -- #guard evaluates these functions during elaboration as well as using their
 -- logical definitions; the module system requires an explicit meta import.

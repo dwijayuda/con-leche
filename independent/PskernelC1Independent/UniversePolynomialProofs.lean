@@ -23,7 +23,7 @@ namespace Polynomial
 theorem evalTerms_constant (assignment : Nat → Nat) (constant : Nat) :
     ∀ terms, constant ≤ evalTerms assignment constant terms
   | [] => Nat.le_refl _
-  | atom :: rest => Nat.le_trans (evalTerms_constant assignment constant rest)
+  | _atom :: rest => Nat.le_trans (evalTerms_constant assignment constant rest)
       (Nat.le_max_right _ _)
 
 theorem evalTerms_term (assignment : Nat → Nat) (constant : Nat) :
@@ -45,8 +45,7 @@ theorem evalTerms_le (assignment : Nat → Nat) (constant bound : Nat) :
     have hhead := hatoms atom (by simp)
     have hrest := evalTerms_le assignment constant bound rest hconstant
       (fun other h => hatoms other (by simp [h]))
-    change Nat.max (Atom.eval assignment atom) (evalTerms assignment constant rest) ≤ bound
-    omega
+    exact Nat.max_le_of_le_of_le hhead hrest
 
 theorem evalTerms_lt (assignment : Nat → Nat) (constant bound : Nat) :
     ∀ terms, constant < bound →
@@ -57,8 +56,7 @@ theorem evalTerms_lt (assignment : Nat → Nat) (constant bound : Nat) :
     have hhead := hatoms atom (by simp)
     have hrest := evalTerms_lt assignment constant bound rest hconstant
       (fun other h => hatoms other (by simp [h]))
-    change Nat.max (Atom.eval assignment atom) (evalTerms assignment constant rest) < bound
-    omega
+    exact Nat.max_lt.mpr ⟨hhead, hrest⟩
 
 theorem evalTerms_mono (first second : Nat → Nat)
     (ordered : ∀ id, first id ≤ second id) (constant : Nat) :
@@ -68,9 +66,9 @@ theorem evalTerms_mono (first second : Nat → Nat)
     have hhead : Atom.eval first atom ≤ Atom.eval second atom :=
       Nat.add_le_add_right (ordered atom.parameter) atom.offset
     have hrest := evalTerms_mono first second ordered constant rest
-    change Nat.max (Atom.eval first atom) (evalTerms first constant rest) ≤
-      Nat.max (Atom.eval second atom) (evalTerms second constant rest)
-    omega
+    exact Nat.max_le_of_le_of_le
+      (Nat.le_trans hhead (Nat.le_max_left _ _))
+      (Nat.le_trans hrest (Nat.le_max_right _ _))
 
 theorem constant_le_least (polynomial : Polynomial) : polynomial.constant ≤ least polynomial :=
   evalTerms_constant (fun _ => 0) polynomial.constant polynomial.terms
@@ -82,7 +80,7 @@ theorem least_le_eval (assignment : Nat → Nat) (polynomial : Polynomial) :
 
 theorem offset_le_least (polynomial : Polynomial) (atom : Atom) (member : atom ∈ polynomial.terms) :
     atom.offset ≤ least polynomial := by
-  simpa only [Atom.eval, Nat.zero_add] using
+  simpa only [Atom.eval, Nat.zero_add, least, eval] using
     evalTerms_term (fun _ => 0) polynomial.constant polynomial.terms atom member
 
 theorem evalTerms_baseMax (assignment : Nat → Nat) (first second : Nat) :
@@ -92,7 +90,7 @@ theorem evalTerms_baseMax (assignment : Nat → Nat) (first second : Nat) :
   | atom :: rest => by
     simp only [evalTerms]
     rw [evalTerms_baseMax assignment first second rest]
-    omega
+    rw [← Nat.max_assoc, Nat.max_comm (Atom.eval assignment atom) first, Nat.max_assoc]
 
 theorem evalTerms_append (assignment : Nat → Nat) (first second : Nat) :
     ∀ left right, evalTerms assignment (Nat.max first second) (left ++ right) =
@@ -101,7 +99,7 @@ theorem evalTerms_append (assignment : Nat → Nat) (first second : Nat) :
   | atom :: rest, right => by
     simp only [List.cons_append, evalTerms]
     rw [evalTerms_append assignment first second rest right]
-    omega
+    exact (Nat.max_assoc _ _ _).symm
 
 theorem evalTerms_successor (assignment : Nat → Nat) (constant : Nat) :
     ∀ terms, evalTerms assignment (constant + 1)
@@ -111,8 +109,8 @@ theorem evalTerms_successor (assignment : Nat → Nat) (constant : Nat) :
   | atom :: rest => by
     simp only [List.map_cons, evalTerms]
     rw [evalTerms_successor assignment constant rest]
-    simp only [Atom.eval]
-    omega
+    simp only [Atom.eval, ← Nat.add_assoc]
+    exact Nat.add_max_add_right _ _ 1
 
 theorem eval_zero (assignment : Nat → Nat) : eval assignment zero = 0 := rfl
 
@@ -160,7 +158,8 @@ theorem leq_complete (left right : Polynomial)
   · intro atom member
     have exists_dominator : ∃ other ∈ right.terms,
         atom.parameter = other.parameter ∧ atom.offset ≤ other.offset := by
-      by_contra absent
+      apply Classical.byContradiction
+      intro absent
       let probe : Nat → Nat := fun id => if id = atom.parameter then least right + 1 else 0
       have own : Atom.eval probe atom = least right + 1 + atom.offset := by
         simp [Atom.eval, probe]
@@ -172,7 +171,8 @@ theorem leq_complete (left right : Polynomial)
         intro other present
         by_cases same : other.parameter = atom.parameter
         · have hoffset : other.offset < atom.offset := by
-            by_contra notLess
+            apply Classical.byContradiction
+            intro notLess
             have hle : atom.offset ≤ other.offset := by omega
             exact absent ⟨other, present, same.symm, hle⟩
           have hvalue : Atom.eval probe other = least right + 1 + other.offset := by
@@ -195,7 +195,8 @@ theorem leq_complete (left right : Polynomial)
 
 theorem equivalent_sound (left right : Polynomial) (accepted : equivalent left right = true) :
     ∀ assignment, eval assignment left = eval assignment right := by
-  obtain ⟨forward, backward⟩ := Bool.and_eq_true.mp accepted
+  simp only [equivalent, Bool.and_eq_true] at accepted
+  obtain ⟨forward, backward⟩ := accepted
   intro assignment
   exact Nat.le_antisymm (leq_sound left right forward assignment)
     (leq_sound right left backward assignment)
@@ -203,7 +204,7 @@ theorem equivalent_sound (left right : Polynomial) (accepted : equivalent left r
 theorem equivalent_complete (left right : Polynomial)
     (same : ∀ assignment, eval assignment left = eval assignment right) :
     equivalent left right = true := by
-  apply Bool.and_eq_true.mpr
+  simp only [equivalent, Bool.and_eq_true]
   exact ⟨leq_complete left right (fun assignment => Nat.le_of_eq (same assignment)),
     leq_complete right left (fun assignment => Nat.le_of_eq (same assignment).symm)⟩
 
