@@ -12,6 +12,9 @@ syntax position. Under a binder body we increase that index. A matching
 occurrence is replaced by the input expression raised by exactly that
 number of intervening binders; variables above it are decremented.
 
+A locally opened free variable carries a bound-variable-closed type,
+which is atomic for this walk, matching ConLeche's actual substitution.
+
 This is one checked operation, not a speculative evaluator. The root
 scope theorem establishes the semantic precondition needed to use it in
 future beta/zeta reduction and dependent type inference.
@@ -27,7 +30,7 @@ def instantiateAt (index : Nat) (replacement : Expr) : Expr → Expr
       if i < index then .bvar i
       else if i = index then lift index 0 replacement
       else .bvar (i - 1)
-  | .fvar i type => .fvar i (instantiateAt index replacement type)
+  | .fvar i type => .fvar i type
   | .sort level => .sort level
   | .const name levels => .const name levels
   | .app function argument =>

@@ -27,8 +27,7 @@ theorem lift_zero (term : Expr) (cutoff : Nat) : lift 0 cutoff term = term := by
   induction term generalizing cutoff with
   | bvar i =>
     by_cases h : cutoff ≤ i <;> simp [lift, h]
-  | fvar i type ih =>
-    simp [lift, ih cutoff]
+  | fvar i type ih => rfl
   | sort level => rfl
   | const name levels => rfl
   | app function argument ihf iha =>
@@ -74,8 +73,7 @@ theorem instantiateAt_preserves_scope (term replacement : Expr)
   | fvar index type ih =>
     cases hterm with
     | fvar hi ht =>
-      simpa [instantiateAt] using
-        (Scoped.fvar hi (ih outer fv offset hreplacement ht))
+      simpa [instantiateAt] using (Scoped.fvar hi ht)
   | sort level => exact Scoped.sort
   | const name levels => exact Scoped.const
   | app function argument ihf iha =>

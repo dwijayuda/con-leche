@@ -23,8 +23,11 @@ open PskernelC1Independent.Expr
   .letE (.sort .zero) (.lit (.nat 7)) (.app (.lit (.nat 7)) (.bvar 0))
 #guard instantiate1 (.proj .anonymous 0 (.bvar 0)) (.lit (.nat 7)) =
   .proj .anonymous 0 (.lit (.nat 7))
+#guard instantiate1 (.fvar 1 (.fvar 0 (.sort .zero))) (.lit (.nat 7)) =
+  .fvar 1 (.fvar 0 (.sort .zero))
+-- Malformed fvar annotations are never magically fixed by instantiation.
 #guard instantiate1 (.fvar 1 (.bvar 0)) (.lit (.nat 7)) =
-  .fvar 1 (.lit (.nat 7))
+  .fvar 1 (.bvar 0)
 
 -- An open replacement's bound variables must be raised under lambdas.
 #guard instantiate1 (.lam (.sort .zero) (.bvar 1) .never) (.bvar 0) =

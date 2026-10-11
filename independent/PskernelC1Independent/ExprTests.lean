@@ -19,7 +19,9 @@ open PskernelC1Independent.Expr
 #guard checkScoped 0 0 (.fvar 0 (.sort .zero)) = false
 #guard checkScoped 0 1 (.fvar 0 (.sort .zero)) = true
 #guard checkScoped 0 1 (.fvar 0 (.bvar 0)) = false
-#guard checkScoped 1 1 (.fvar 0 (.bvar 0)) = true
+#guard checkScoped 1 1 (.fvar 0 (.bvar 0)) = false
+#guard checkScoped 1 2 (.fvar 1 (.fvar 0 (.sort .zero))) = true
+#guard checkScoped 1 2 (.fvar 0 (.fvar 1 (.sort .zero))) = false
 #guard checkScoped 0 0 (.proj .anonymous 0 (.bvar 0)) = false
 #guard checkScoped 0 0 (.lit (.nat 9)) = true
 #guard checkScoped 0 0 (.lit (.str "ok")) = true
@@ -31,11 +33,12 @@ open PskernelC1Independent.Expr
   (.lam (.sort .zero) (.app (.bvar 0) (.bvar 2)) .never)
 #guard lift 2 0 (.letE (.sort .zero) (.bvar 0) (.app (.bvar 0) (.bvar 1))) =
   (.letE (.sort .zero) (.bvar 2) (.app (.bvar 0) (.bvar 3)))
-#guard lift 2 0 (.fvar 1 (.bvar 0)) = (.fvar 1 (.bvar 2))
+#guard lift 2 0 (.fvar 1 (.fvar 0 (.sort .zero))) =
+  (.fvar 1 (.fvar 0 (.sort .zero)))
 #guard lift 100 0 (.lam (.sort .zero) (.bvar 0) .never) =
   (.lam (.sort .zero) (.bvar 0) .never)
 #guard checkScoped 3 2
-  (.forallE (.fvar 0 (.bvar 1)) (.proj .anonymous 0 (.bvar 0)) .never) = true
+  (.forallE (.fvar 0 (.sort .zero)) (.proj .anonymous 0 (.bvar 0)) .never) = true
 
 example (db fv : Nat) (e : Expr) :
     checkScoped db fv e = true ↔ Scoped db fv e :=

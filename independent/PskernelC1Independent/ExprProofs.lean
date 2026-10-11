@@ -23,9 +23,9 @@ theorem checkScoped_sound (term : Expr) (db fv : Nat)
   | bvar index =>
     exact Scoped.bvar (by simpa [checkScoped] using h)
   | fvar index type ih =>
-    have hs : index < fv ∧ checkScoped db fv type = true := by
+    have hs : index < fv ∧ checkScoped 0 index type = true := by
       simpa [checkScoped, Bool.and_eq_true, decide_eq_true_eq] using h
-    exact Scoped.fvar hs.1 (ih db fv hs.2)
+    exact Scoped.fvar hs.1 (ih 0 index hs.2)
   | sort level => exact Scoped.sort
   | const name universes => exact Scoped.const
   | app function argument ihf iha =>
@@ -93,8 +93,7 @@ theorem lift_preserves_scope (term : Expr) (db fv amount cutoff : Nat)
   | fvar index type ih =>
     cases h with
     | fvar hi htype =>
-      simpa [Expr.lift] using
-        (Scoped.fvar hi (ih db fv cutoff htype hc))
+      simpa [Expr.lift] using (Scoped.fvar hi htype)
   | sort level =>
     exact Scoped.sort
   | const name levels =>

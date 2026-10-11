@@ -57,10 +57,12 @@ namespace Expr
 
 /-- Executable syntactic scope validation. Binder domains and let values
 are OUTSIDE the introduced binder; only binder bodies are under it.
-An fvar has an explicit type that must itself be scoped. -/
+An fvar has an explicit type already closed against all loose bound variables,
+and referencing only earlier free-variable levels. This structural invariant
+prevents substitution and raising from changing a previously opened type. -/
 def checkScoped (bdepth fdepth : Nat) : Expr → Bool
   | .bvar index => decide (index < bdepth)
-  | .fvar index type => decide (index < fdepth) && checkScoped bdepth fdepth type
+  | .fvar index type => decide (index < fdepth) && checkScoped 0 index type
   | .sort _ | .const _ _ | .lit _ => true
   | .app function argument =>
       checkScoped bdepth fdepth function && checkScoped bdepth fdepth argument
@@ -73,11 +75,12 @@ def checkScoped (bdepth fdepth : Nat) : Expr → Bool
 
 /-- Capture-avoiding raising of outer de Bruijn indices.
 The cutoff rises only when entering a *body*, not in binder domains,
-nor in let declaration types or values. -/
+nor in let declaration types or values. The closed type carried by an
+fvar is atomic for this walk, matching ConLeche/Kernel/ExprOps.lean. -/
 def lift (amount cutoff : Nat) : Expr → Expr
   | .bvar index =>
       if cutoff ≤ index then .bvar (index + amount) else .bvar index
-  | .fvar index type => .fvar index (lift amount cutoff type)
+  | .fvar index type => .fvar index type
   | .sort level => .sort level
   | .const name universes => .const name universes
   | .app function argument =>
@@ -98,7 +101,7 @@ Boolean check. Scope invariants will become preconditions of inference. -/
 inductive Scoped : Nat → Nat → Expr → Prop where
   | bvar {db fv index} : index < db → Scoped db fv (.bvar index)
   | fvar {db fv index type} :
-      index < fv → Scoped db fv type → Scoped db fv (.fvar index type)
+      index < fv → Scoped 0 index type → Scoped db fv (.fvar index type)
   | sort {db fv u} : Scoped db fv (.sort u)
   | const {db fv name universes} : Scoped db fv (.const name universes)
   | app {db fv function argument} :
