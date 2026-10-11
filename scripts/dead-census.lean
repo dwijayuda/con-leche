@@ -11,7 +11,7 @@ chooses the seeds and walks it.
 
 **What it dumps.**  In an environment obtained by importing the given
 modules, one line per constant declared by con-leche's own modules
-(`ConLeche`, `ConLeche.*`, `Main`, `PinDump`, `ConLecheTests*`):
+(`ConLeche`, `ConLeche.*`, `PskernelC1.*`, `Main`, `PinDump`, `ConLecheTests*`):
 
     <name> \t <module> \t <kind> \t <dep> <dep> …
 
@@ -45,6 +45,7 @@ def isOurs (env : Environment) (n : Name) : Bool :=
   | some i =>
     let m := (env.header.moduleNames[i.toNat]!).toString
     m == "ConLeche" || "ConLeche.".isPrefixOf m
+      || m == "PskernelC1" || "PskernelC1.".isPrefixOf m
       || m == "Main" || m == "PinDump"
       || m == "ConLecheTests" || "ConLecheTests.".isPrefixOf m
 

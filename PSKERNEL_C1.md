@@ -13,6 +13,34 @@ The compiler, embedded prelude and operation pins remain on the coherent
 model-proved `.verified` mode. `--verified` is an optional explicit spelling
 for integration with checker harnesses.
 
+## Reading order
+
+Explainability, readability and understandability guide the design. The
+small owned interface keeps the proof hypothesis visible, and performance
+changes need both a clear correctness argument and useful measurements.
+
+| Read | What it explains |
+|---|---|
+| [Proof guide](docs/pskernel-c1/PROOF_GUIDE.md) | How an accepted result connects to the model and consistency theorem. |
+| [Kernel contract](PskernelC1/Kernel.lean) | The actual check functions and the evidence returned by success. |
+| [Soundness](PskernelC1/Soundness.lean) | Short theorem applications that reuse the existing semantic proof. |
+| [Command line](PskernelC1/Main.lean) | The streaming phases, explicit policy choices and error handling. |
+| [Performance guide](docs/pskernel-c1/PERFORMANCE_GUIDE.md) | The retained architecture, statistics change and matched measurement method. |
+| [Recorded measurements](docs/pskernel-c1/MEASUREMENTS.md) | The observed costs, exact tested revision and limits of the evidence. |
+
+```mermaid
+flowchart TB
+  F["File reads: trusted IO"] --> P["Parser and prelude"]
+  P --> C["Verified checker"]
+  C --> R["AcceptedStream receipt"]
+  R -. "acceptance hypothesis" .-> T["Model and consistency theorems"]
+  S["SetTheory assumptions"] --> T
+```
+
+The theorem step is checked during the proof build. It is not a runtime
+model computation. The executable carries erased evidence of acceptance;
+the semantic interpretation is established in the separate proof layer.
+
 ## Build the proof first
 
 The Linux CI workflow builds the C1 proof and axiom audit before the C1
@@ -33,7 +61,9 @@ upstream suite; CI separately builds `PskernelC1Tests` to check the C1
 capstones' axiom footprint.
 
 The CI download contains a Linux tarball with the executable, original
-license, this guide, toolchain pin, source revision and executable checksum.
+license, these guides, toolchain pin, source revision and executable checksum.
+Packaged source links point to that exact revision on GitHub; links between
+the included guides work locally.
 After extraction, verify `sha256sum -c SHA256SUMS` and run `./pskernel-c1`.
 Draft branches are checked on pushes; opening a draft pull request reuses
 that push validation instead of starting a duplicate cold build.
@@ -196,6 +226,12 @@ wall and CPU time, peak RSS and binary size, and records retired
 instructions if the runner permits the performance counter. Missing
 counters remain explicitly unavailable. A measured improvement on a small
 fixture is not a claim of a universal speedup on Mathlib.
+
+The [first recorded measurements](docs/pskernel-c1/MEASUREMENTS.md), at
+`b67440c1`, found no measurable speedup on the three small fixtures.
+The C1 executable was 18,827,936 bytes, 77,328 bytes smaller than the
+same-commit original executable. The sample is a baseline for further
+work; it does not justify a more complicated checking algorithm.
 
 ## Compatibility and Arena
 

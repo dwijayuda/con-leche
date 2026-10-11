@@ -83,7 +83,8 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 ROOTS="ConLeche.MainTheorem ConLeche.Verify.Cached ConLeche.Model ConLeche.Semantics ConLeche.Complete
-       ConLeche.SetModel ConLeche.Term ConLeche ConLeche.PinGen.Certs Main"
+       ConLeche.SetModel ConLeche.Term ConLeche ConLeche.PinGen.Certs Main
+       PskernelC1.Soundness PskernelC1.Main"
 
 ALLOW=tests/shake-allowlist.txt
 WORK=${PUBPLAN_DIR:-_tmp/shake-gate}
@@ -136,7 +137,7 @@ sys.exit(1 if (new or stale) else 0)
 PY
 
 # --- (b) the `public` keyword ---------------------------------------
-MODS=$(git ls-files 'ConLeche/*.lean' | sed 's/\.lean$//;s|/|.|g' \
+MODS=$(git ls-files 'ConLeche/*.lean' 'PskernelC1/*.lean' | sed 's/\.lean$//;s|/|.|g' \
         | grep -v '^ConLeche\.Challenge$'; echo ConLeche; echo Main)
 if ! lake env lean --run scripts/dead-census.lean $MODS > "$WORK/census.tsv" 2> "$WORK/census.err" \
    || ! lake env lean --run scripts/pub-iface.lean $MODS > "$WORK/pub.tsv" 2> "$WORK/pub.err"; then

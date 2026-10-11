@@ -66,7 +66,8 @@ def parseArgs : List String → Args → Except String Args
       | none => parseArgs rest { a with file := some arg }
       | some _ => .error "exactly one input file is required"
 
-/-- The success path requires a receipt for this run. Its evidence is erased. -/
+/-- Lean checks the receipt at this call boundary. The body only prints:
+the evidence is erased, so accepting never computes a model at runtime. -/
 def printAccepted (count : Nat) (_accepted : AcceptedStream) : IO UInt32 := do
   IO.println s!"pskernel-c1: accepted {count} declarations (--verified)"
   return 0
@@ -88,8 +89,13 @@ def checkFile (file : String) (jobs : Nat) (stats : Bool)
     | .ok parsed =>
       let decls := Frontend.preparePrelude pre parsed.decls
       let tParse ← IO.monoMsNow
-      let result ← Driver.checkDeclsIO .verified (← IO.getStderr)
-        0 decls.size t0 tParse jobs false drain decls (collectStats := stats)
+      let err ← IO.getStderr
+      -- No progress output; keep the inherited persistent-mark optimization.
+      -- Statistics are independent of the fixed checking policy.
+      let result ← Driver.checkDeclsIO
+        (mode := .verified) (err := err) (stride := 0) (total := decls.size)
+        (t0 := t0) (tParse := tParse) (jobs := jobs) (noMark := false)
+        (drain := drain) (ds := decls) (collectStats := stats)
       match result with
       | .ok checked =>
         let accepted : Accepted decls := ⟨checked.val, checked.property⟩

@@ -9,6 +9,10 @@ Build a small, fast, model-backed Lean declaration checker in
 acceptance and consistency contract before the executable and optimize
 without breaking its proof connection.
 
+The user's latest priority is explainability, readability and
+understandability. Keep the source and proof path easy to follow; justify
+added complexity with a clear invariant and measured benefit.
+
 Base: `3b37939f0d9d37bfd86299dc92d9a97fbacba29e`.
 Toolchain: `leanprover/lean4:v4.35.0-rc3`.
 The existing independent `dwijayuda/pskernel` project is separate.
@@ -30,6 +34,8 @@ The existing independent `dwijayuda/pskernel` project is separate.
   verdict checks, telemetry equivalence and matched performance smoke.
 - `PSKERNEL_C1.md`: contract, foundations, architecture, usage, performance
   rationale, compatibility limits and pinned primary research sources.
+- `docs/pskernel-c1/PROOF_GUIDE.md` and `PERFORMANCE_GUIDE.md`: short source
+  reading guides. The CLI names its policy arguments explicitly.
 
 The first implementation reuses the full ConLeche checker. It is an owned
 small interface and optimized driver configuration, not a newly minimal
@@ -47,23 +53,35 @@ is not validation.
 
 ## Validation status
 
-The initial push is `7647b8ce0383b91cb0b29879ea4622a5c1955cd1`.
-[CI run 38162036305](https://github.com/dwijayuda/con-leche/actions/runs/38162036305)
-passed the source/trust boundaries and built the inherited proof
-dependencies. It found one dependent-match elaboration error in
-`certifyResult`: its successful branch had already refined the equation,
-so the subtype requires `rfl`. That construction is corrected in the next
-commit. The run saved its successful module cache. Runtime gates have not
-run yet; the corrected branch requires another CI run.
+[CI run 38162805999](https://github.com/dwijayuda/con-leche/actions/runs/38162805999)
+at `b67440c1e099471269ef30b211ff7f85b46f3098` passed the warning-free C1
+proof and thirteen-axiom-audit build, default build, upstream test library,
+all 47 C1 CLI cases, eight paired statistics cases, matched measurements
+and executable packaging. The standard battery also passed its 470 e2e
+and 15 annotation fixtures and worker-count/trusted sweeps. The overall
+run failed because the import census omitted the three new C1 modules.
+The current source adds that coverage and the readability/package changes.
+Each push validates the exact branch head; consult the checks linked from
+[draft PR #1](https://github.com/dwijayuda/con-leche/pull/1) for the current
+qualification result. A passing earlier revision never qualifies changed
+source automatically.
+
+The earlier run found a dependent-match elaboration error in
+`certifyResult`; `b67440c1` corrected the refined branch with `rfl`, and
+the subsequent proof build passed. Both runs preserved successful module
+work in the CI cache.
 
 No local Lean build or checker test has been run; the project workflow uses
 GitHub/cloud Linux CI. Static source inspection and lint are separate from
 that compiler/runtime validation.
 
-No C1 performance numbers or Lean Kernel Arena score are claimed yet.
-CI measurements must be read at their exact commit and toolchain. The
-historical upstream PERF.md and published Arena snapshot concern their
-own revisions.
+The first C1 measurements are in `docs/pskernel-c1/MEASUREMENTS.md`:
+three measured repetitions per fixture/configuration, one worker, no
+measurable wall-time speedup and a 77,328-byte smaller executable than
+the same-commit original. Instruction counters were unavailable on the
+runner. No new public Lean Kernel Arena score is claimed. Measurements
+must be read at their exact commit and toolchain; the historical upstream
+PERF.md and public Arena snapshot concern their own revisions.
 
 ## Required CI evidence
 
