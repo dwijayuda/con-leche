@@ -36,16 +36,22 @@ theorem zeroAtSigns_spec (positive : Nat → Bool) (residual : Nat → Nat)
       rw [ihLeft.mp hl, ihRight.mp hr]
       rfl
     · intro h
-      have hl : eval (signedAssignment positive residual) left = 0 := by
-        have hle := Nat.le_max_left
-          (eval (signedAssignment positive residual) left)
-          (eval (signedAssignment positive residual) right)
-        omega
-      have hr : eval (signedAssignment positive residual) right = 0 := by
-        have hle := Nat.le_max_right
-          (eval (signedAssignment positive residual) left)
-          (eval (signedAssignment positive residual) right)
-        omega
+      have hl : eval (signedAssignment positive residual) left = 0 :=
+        Nat.eq_zero_of_le_zero (by
+          calc
+            eval (signedAssignment positive residual) left ≤
+                Nat.max (eval (signedAssignment positive residual) left)
+                  (eval (signedAssignment positive residual) right) :=
+              Nat.le_max_left _ _
+            _ = 0 := h)
+      have hr : eval (signedAssignment positive residual) right = 0 :=
+        Nat.eq_zero_of_le_zero (by
+          calc
+            eval (signedAssignment positive residual) right ≤
+                Nat.max (eval (signedAssignment positive residual) left)
+                  (eval (signedAssignment positive residual) right) :=
+              Nat.le_max_right _ _
+            _ = 0 := h)
       exact ⟨ihLeft.mpr hl, ihRight.mpr hr⟩
   | imax left right ihLeft ihRight =>
     simp only [zeroAtSigns, eval]
@@ -59,7 +65,6 @@ theorem zeroAtSigns_spec (positive : Nat → Bool) (residual : Nat → Nat)
           (eval (signedAssignment positive residual) left)
           (eval (signedAssignment positive residual) right)
         simp [hr] at hz
-        omega
 
 /-- The branch compilation preserves evaluation for EVERY residual
 assignment; positive variables are genuinely arbitrary successors. -/
