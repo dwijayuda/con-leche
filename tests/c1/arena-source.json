@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "arena_revision": "b83254de5146ef34147ab82a48edbe1856b0edcc",
+  "arena_revision": "0454b9707259b59e18f97a065adbf14f1f61a355",
   "metadata_url": "https://arena.lean-lang.org/results.json",
   "archive_url": "https://arena.lean-lang.org/lean-arena-tests.tar.gz",
-  "metadata_sha256": null,
+  "metadata_sha256": "7f5d9c60430bad574692c9ff05d5c07fb7a43125329d0ac81792d0f638510306",
   "archive_sha256": null,
-  "capture_note": "Initial capture requires --snapshot-mode capture. The metadata revision is checked, every archive input must match the metadata SHA-256 and outcome, and all captured bytes are retained as CI evidence. Pin the two captured file hashes after inspecting that evidence. The archive is not the full Arena suite."
+  "capture_note": "Cloud run 38171620344 captured this metadata at 2026-10-11 20:18 UTC. It is the 2026-10-11 19:39:59 UTC publication, newer than the web cache's October 8 snapshot. Upstream commit 0454b970 is the direct child of b83254de and changes only the nanoda checker pin (PR #262); reviewed through the GitHub commit API. Keep the metadata digest and revision checks. Capture and then pin the archive digest after verifying every input's hash and outcome. This archive is not the full Arena suite."
 }
