@@ -1,6 +1,9 @@
 module
 
 import PskernelC1Independent.UniverseProofs
+-- #guard evaluates these functions during elaboration as well as using their
+-- logical definitions; the module system requires an explicit meta import.
+public meta import PskernelC1Independent.Universe
 
 public section
 

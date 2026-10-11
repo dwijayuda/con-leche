@@ -15,6 +15,10 @@ CAPSTONES = {
 }
 PREFIX = 'PskernelC1Independent.Level.'
 ALLOWED_AXIOMS = {'propext', 'Classical.choice', 'Quot.sound'}
+EXPECTED_AXIOMS = {name: ['propext'] for name in CAPSTONES}
+EXPECTED_AXIOMS['eval_maxSmart'] = sorted(['propext', 'Quot.sound'])
+for _name in ('eval_imaxSmart', 'eval_normalize', 'normalize_sound', 'compareFast_sound'):
+    EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
 
 
 def code_only(text: str) -> str:
@@ -70,7 +74,7 @@ def audit_source() -> list[dict]:
             raise ValueError(f'forbidden trust construct in {path.relative_to(ROOT)}')
         if 'skipKernelTC' in code:
             raise ValueError('kernel checking must not be disabled')
-        imports = re.findall(r'^\s*(?:public\s+)?import\s+(?:all\s+)?([A-Za-z0-9_.]+)', code, re.M)
+        imports = re.findall(r'^\s*(?:(?:public|meta)\s+)*import\s+(?:all\s+)?([A-Za-z0-9_.]+)', code, re.M)
         if any(not (i == 'Init' or i.startswith('Init.') or
                     i == 'PskernelC1Independent' or i.startswith('PskernelC1Independent.'))
                for i in imports):
@@ -99,6 +103,9 @@ def audit_axioms(log: str) -> dict[str, list[str]]:
     expected = {PREFIX + name for name in CAPSTONES}
     if set(seen) != expected:
         raise ValueError(f'capstone census mismatch; missing={sorted(expected-set(seen))}, extra={sorted(set(seen)-expected)}')
+    for short, axioms in EXPECTED_AXIOMS.items():
+        if seen[PREFIX + short] != axioms:
+            raise ValueError(f'changed axiom footprint: {short}: {seen[PREFIX + short]}')
     return seen
 
 
