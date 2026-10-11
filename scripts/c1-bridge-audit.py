@@ -17,7 +17,10 @@ EXPECTED = {'toReference_eval', 'fromReference_eval', 'source_roundtrip',
             'encodeReferenceFinite_roundtrip', 'encodeReferenceFinite_eval',
             'encodeReferenceFinite_complete', 'compareSourceWith_sound',
             'compareSourceWith_different', 'compareSource_encoding_total',
-            'compareSource_sound', 'compareSource_different'}
+            'compareSource_sound', 'compareSource_different',
+            'compareSourceExactWith_true', 'compareSourceExactWith_false',
+            'compareSourceExact_total', 'compareSourceExact_correct',
+            'compareSourceExact_different'}
 
 # Exact dependencies observed in warning-free semantic bridge run 38178500807.
 ONLY_PROPEXT = {'toReference_eval', 'fromReference_eval', 'source_roundtrip'}
@@ -41,7 +44,8 @@ if re.search(r'\b(sorry|admit|axiom|unsafe|implemented_by|native_decide|extern)\
 imports = re.findall(r'^\s*(?:(?:public|meta)\s+)*import\s+(?:all\s+)?([A-Za-z0-9_.]+)', code, re.M)
 if set(imports) != {'ConLeche.Verify.Level', 'PskernelC1Independent.UniverseProofs',
                     'PskernelC1Independent.UniversePolynomialProofs',
-                    'PskernelC1Independent.NameCodecProofs'}:
+                    'PskernelC1Independent.NameCodecProofs',
+                    'PskernelC1Independent.UniverseAllSignsProofs'}:
     raise ValueError(f'bridge dependency change requires review: {imports}')
 seen = {}
 pattern = r"'PskernelC1Bridge\.([^']+)' (?:depends on axioms: \[([^\]]*)\]|does not depend on any axioms)"

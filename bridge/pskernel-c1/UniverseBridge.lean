@@ -4,6 +4,7 @@ public import ConLeche.Verify.Level
 public import PskernelC1Independent.UniverseProofs
 public import PskernelC1Independent.UniversePolynomialProofs
 public import PskernelC1Independent.NameCodecProofs
+public import PskernelC1Independent.UniverseAllSignsProofs
 
 public section
 
@@ -379,6 +380,123 @@ example :
       (.imax (.param (.str .anonymous "u")) (.param (.str .anonymous "v"))) =
       .unknown := by decide
 
+/-!
+## An exhaustive semantic source oracle, separate from kernel conversion
+
+The exact internal sign-enumeration comparator can also be used on the
+ORIGINAL exported syntax via the finite codec. Unlike a partial
+polynomial front door, this source operation always has a conclusive
+Boolean result after building the complete table from both inputs.
+It is a potentially exponential proof/differential reference and must
+not silently replace Lean's operational definitional equality.
+-/
+
+@[expose] def compareSourceExactWith (table : List ConLeche.Name)
+    (left right : ConLeche.Level) : Option Bool :=
+  match encodeReferenceFinite table left, encodeReferenceFinite table right with
+  | some il, some ir => some (Level.compareExhaustive il ir)
+  | _, _ => none
+
+/-- A successful positive source comparison is true at EVERY level
+assignment. Missing source names are represented by none, never false. -/
+theorem compareSourceExactWith_true (table : List ConLeche.Name)
+    (left right : ConLeche.Level)
+    (accepted : compareSourceExactWith table left right = some true) :
+    ∀ assignment, ConLeche.Level.eval assignment left =
+      ConLeche.Level.eval assignment right := by
+  unfold compareSourceExactWith at accepted
+  cases hl : encodeReferenceFinite table left with
+  | none => simp [hl] at accepted
+  | some il =>
+    cases hr : encodeReferenceFinite table right with
+    | none => simp [hl, hr] at accepted
+    | some ir =>
+      have hp : Level.compareExhaustive il ir = true := by
+        simpa [hl, hr] using accepted
+      have hleft := encodeReferenceFinite_roundtrip table left il hl
+      have hright := encodeReferenceFinite_roundtrip table right ir hr
+      intro assignment
+      rw [← hleft, ← hright, toReference_eval, toReference_eval]
+      exact (Level.compareExhaustive_correct il ir).mp hp _
+
+/-- A negative verdict from a completed source encoding also has
+semantic justification, not merely an omitted or malformed input. -/
+theorem compareSourceExactWith_false (table : List ConLeche.Name)
+    (left right : ConLeche.Level)
+    (different : compareSourceExactWith table left right = some false) :
+    ¬ (∀ assignment, ConLeche.Level.eval assignment left =
+      ConLeche.Level.eval assignment right) := by
+  intro same
+  unfold compareSourceExactWith at different
+  cases hl : encodeReferenceFinite table left with
+  | none => simp [hl] at different
+  | some il =>
+    cases hr : encodeReferenceFinite table right with
+    | none => simp [hl, hr] at different
+    | some ir =>
+      have hp : Level.compareExhaustive il ir = false := by
+        simpa [hl, hr] using different
+      apply Level.compareExhaustive_different il ir hp
+      intro residual
+      rw [encodeReferenceFinite_eval table left il hl residual,
+        encodeReferenceFinite_eval table right ir hr residual]
+      exact same (sourceAssignment table residual)
+
+/-- Construct the complete finite input-name table first. -/
+@[expose] def compareSourceExact (left right : ConLeche.Level) : Option Bool :=
+  compareSourceExactWith (sourceParameters left ++ sourceParameters right) left right
+
+/-- No name-table omission is possible for two concrete source inputs. -/
+theorem compareSourceExact_total (left right : ConLeche.Level) :
+    ∃ verdict, compareSourceExact left right = some verdict := by
+  obtain ⟨⟨il, hl⟩, ⟨ir, hr⟩⟩ := compareSource_encoding_total left right
+  exact ⟨Level.compareExhaustive il ir, by
+    simp [compareSourceExact, compareSourceExactWith, hl, hr]⟩
+
+/-- Full semantic iff for arbitrary source levels, including nested imax. -/
+theorem compareSourceExact_correct (left right : ConLeche.Level) :
+    compareSourceExact left right = some true ↔
+      ∀ assignment, ConLeche.Level.eval assignment left =
+        ConLeche.Level.eval assignment right := by
+  constructor
+  · exact compareSourceExactWith_true _ left right
+  · intro same
+    obtain ⟨⟨il, hl⟩, ⟨ir, hr⟩⟩ := compareSource_encoding_total left right
+    have internalEq : Level.Equivalent il ir := by
+      intro residual
+      rw [encodeReferenceFinite_eval _ left il hl residual,
+        encodeReferenceFinite_eval _ right ir hr residual]
+      exact same (sourceAssignment (sourceParameters left ++ sourceParameters right) residual)
+    have eq := (Level.compareExhaustive_correct il ir).mpr internalEq
+    simp [compareSourceExact, compareSourceExactWith, hl, hr, eq]
+
+/-- If the result is false, it cannot be a disguised inconclusive case. -/
+theorem compareSourceExact_different (left right : ConLeche.Level)
+    (different : compareSourceExact left right = some false) :
+    ¬ (∀ assignment, ConLeche.Level.eval assignment left =
+      ConLeche.Level.eval assignment right) := by
+  exact compareSourceExactWith_false _ left right different
+
+-- Source-level semantic regression examples, distinct from official
+-- version-pinned algorithmic conversion conformance.
+example :
+    compareSourceExact
+      (.imax (.param (.str .anonymous "u")) (.param (.str .anonymous "v")))
+      (.imax (.param (.str .anonymous "u")) (.param (.str .anonymous "v"))) =
+      some true := by decide
+
+example :
+    compareSourceExact
+      (.imax (.param (.str .anonymous "u")) (.param (.str .anonymous "v")))
+      (.max (.param (.str .anonymous "u")) (.param (.str .anonymous "v"))) =
+      some false := by decide
+
+example :
+    compareSourceExact
+      (.succ (.imax (.param (.str .anonymous "u")) (.param (.str .anonymous "v"))))
+      (.imax (.param (.str .anonymous "u")) (.param (.str .anonymous "v"))) =
+      some false := by decide
+
 #print axioms toReference_eval
 #print axioms fromReference_eval
 #print axioms source_roundtrip
@@ -395,5 +513,10 @@ example :
 #print axioms compareSource_encoding_total
 #print axioms compareSource_sound
 #print axioms compareSource_different
+#print axioms compareSourceExactWith_true
+#print axioms compareSourceExactWith_false
+#print axioms compareSourceExact_total
+#print axioms compareSourceExact_correct
+#print axioms compareSourceExact_different
 
 end PskernelC1Bridge

@@ -16,3 +16,7 @@ lake build ConLeche.Verify.Level
 LEAN_PATH="$PWD/independent/.lake/build/lib/lean:$PWD/.lake/build/lib/lean" \
   lean bridge/pskernel-c1/UniverseBridge.lean
 ```
+
+## Complete semantic reference, not the production conversion algorithm
+
+The standalone independent `compareExhaustive` now has a proof of soundness and completeness of semantic universe equality for all five constructors, including nested `imax`, by enumerating zero/positive parameter patterns. The proof-only bridge applies it to actual exported source names through the complete finite codec and proves the Boolean outcomes reflect source evaluation. The reference algorithm can be exponentially expensive (including duplicate parameter occurrences) and must not be placed on the production hot path without a measured refinement and resource policy. Equivalence in this set-theoretic semantics is not automatically identical to pinned Lean kernel operational conversion; preserve separate conformance tests and requirements.
