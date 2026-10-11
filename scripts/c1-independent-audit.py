@@ -23,9 +23,14 @@ EXPECTED_AXIOMS = {name: ['propext'] for name in BASE_CAPSTONES}
 EXPECTED_AXIOMS['eval_maxSmart'] = sorted(['propext', 'Quot.sound'])
 for _name in ('eval_imaxSmart', 'eval_normalize', 'normalize_sound', 'compareFast_sound'):
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
-# New polynomial footprints are reported and constrained to the same allowed
-# foundations on their first compiler check. Pin exact observed subsets after
-# inspecting that run; no new semantic axiom or proof placeholder is permitted.
+# Exact polynomial footprints observed in the successful warning-free build
+# at a2476126606850347c8a209f9ebd8adb56fecd1c, run 38173757176.
+for _name in ('toPolynomial_sound', 'comparePolynomial_sound', 'comparePolynomial_decides'):
+    EXPECTED_AXIOMS[_name] = sorted(['propext', 'Quot.sound'])
+for _name in ('comparePolynomial_different', 'comparePolynomial_complete'):
+    EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
+if set(EXPECTED_AXIOMS) != CAPSTONES:
+    raise ValueError('every active capstone must have an exact dependency pin')
 
 
 def code_only(text: str) -> str:

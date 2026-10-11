@@ -1,16 +1,32 @@
 # Independent C1 implementation lane
 
-This package starts the independently implemented PSKernel-C1 engine. It is not yet a declaration checker and is not on the shipped C1 CLI acceptance path.
+This package implements the first independently written PSKernel-C1 components. It is not yet a declaration checker and is not on the shipped C1 CLI acceptance path.
 
-Read the [architecture and priorities](../PSKERNEL_C1_NEXT_ARCHITECTURE.md) first. Size reduction is optional; no size target constrains correctness, capability, proofs, performance or readability.
+Read the [architecture and priorities](../PSKERNEL_C1_NEXT_ARCHITECTURE.md) first. Size reduction is optional: no size target constrains correctness, capability, proofs, performance, or readability.
 
-## Delivered first component
+## Implemented and proved
 
-`PskernelC1Independent/Universe.lean` owns universe syntax with zero, successor, max, imax and natural-number parameter IDs; evaluation; simultaneous substitution; renaming; conservative normalization; and a positive equality fast path.
+| Module | Executable component or checked contract |
+|---|---|
+| `Universe.lean` | Owned zero/successor/max/imax/parameter syntax; evaluation; simultaneous substitution; renaming; conservative normalization; positive equality fast path |
+| `UniverseProofs.lean` | Eleven substitution, renaming, semantic-preservation, positive-verdict, and explicit-incompleteness contracts |
+| `UniversePolynomial.lean` | Finite maxima of constants and parameter-offset atoms; dominance comparison; complete comparator for the imax-free fragment |
+| `UniversePolynomialProofs.lean` | Evaluation preservation, dominance soundness/completeness, sound positive and negative verdicts, and complete/conclusive comparison for the supported fragment |
+| `PolynomialTests.lean` and `PskernelC1IndependentTests.lean` | Thirty-six regression guards, four theorem examples, and sixteen named capstone audits |
 
-`UniverseProofs.lean` proves substitution/renaming laws, semantic preservation of normalization, and soundness of every positive fast-path result. The statements quantify over all assignments. Tests include an equality that deliberately yields `unknown`, so callers cannot treat an inconclusive fast path as inequality.
+The polynomial comparator handles arbitrary nesting of zero, parameters, successor, and max. Tests cover reordered/grouped maxima, duplicate terms, successor distribution, dominated offsets, and distinct constant floors. Its completeness proof uses an explicit separating parameter assignment; it does not assume a unique canonical form or rely on finitely sampled assignments.
 
-These are proofs of the component's actual functions, not a consistency proof for a full kernel. There is no inherited checking call, external dependency, foreign-function implementation or runtime model computation in this component.
+General imax is not yet handled by that comparator. It returns `unknown` for that missing fragment; the basic normalization fast path can still establish some equalities involving imax. Neither unknown result is inequality. `comparePolynomial_different` separately proves the soundness of the polynomial comparator's conclusive negative result.
+
+These are proofs of the actual functions, not a consistency proof for an entire independent kernel. There is no inherited checking call, external package dependency, foreign-function implementation, or runtime model computation in these components.
+
+## Checked evidence
+
+At source `a2476126606850347c8a209f9ebd8adb56fecd1c`, [run 38173757176](https://github.com/dwijayuda/con-leche/actions/runs/38173757176) passed the warning-free independent build, all regression guards and theorem examples, the import/trust fence, and all sixteen capstone audits. [Artifact 11714304653](https://github.com/dwijayuda/con-leche/actions/runs/38173757176/artifacts/11714304653) retains the build logs and exact source hashes.
+
+Every capstone's observed dependency subset is pinned in `scripts/c1-independent-audit.py`. The only allowed global proof foundations are `propext`, `Classical.choice`, and `Quot.sound`; not every theorem uses all three. No proof placeholder or new semantic axiom is accepted.
+
+The separate [proof-only universe bridge](../bridge/pskernel-c1/README.md) connects the basic universe representation and positive fast path to the inherited semantics, with input-name fidelity explicit. Its seven theorems passed [run 38173757189](https://github.com/dwijayuda/con-leche/actions/runs/38173757189) at the same source. It imports ConLeche only in that proof adapter, not in this runtime package. The polynomial comparator's operational integration is still a separate obligation.
 
 ## Build and audit
 
@@ -23,8 +39,10 @@ lake test
 lake env lean PskernelC1IndependentTests.lean
 ```
 
-Cloud Linux CI builds the proofs and regression examples warning-free, scans the independent source/import boundary, and audits all eleven named theorem dependencies. The normal repository CI still validates the qualified inherited checker independently.
+Cloud Linux CI builds the proofs and regression examples warning-free, scans all independent source/imports, and audits sixteen named theorem footprints. The normal repository CI still checks the inherited declaration checker independently. Historical passing evidence does not automatically qualify changed sources.
 
 ## Still required
 
-The parameter-ID/source-name bridge, complete universe comparator, expressions, contexts, inference, conversion, declaration/inductive installation, assumption-relative policy, parser/driver integration and checker-to-model theorem are not implemented here yet. No full-Arena, independent-kernel completion, speedup or binary-size claim follows from this component.
+General imax comparison, a proved finite source-name interner, expression/context operations, inference, conversion, declaration/inductive installation, the assumption-relative policy, parser/driver integration, and the independent checker-to-model theorem are not implemented here yet.
+
+The list-based polynomial dominance implementation is a readable correctness baseline; no hot-path performance superiority is claimed. No full-Arena, full-independent-kernel, speedup, or binary-size claim follows from these component proofs.
