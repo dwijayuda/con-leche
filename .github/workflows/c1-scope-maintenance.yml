@@ -1,0 +1,72 @@
+# One-shot, exact-source maintenance. The successful commit removes this file.
+# No Lean source, proof obligation, fallback row, or verdict test is modified.
+name: C1 root package scope maintenance
+on:
+  push:
+    branches: [pskernel-c1]
+    paths: ['.github/workflows/c1-scope-maintenance.yml']
+permissions:
+  contents: write
+jobs:
+  exact-edit:
+    if: github.repository == 'dwijayuda/con-leche' && github.ref == 'refs/heads/pskernel-c1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply the reviewed root-package scope correction
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import ast
+          import hashlib
+          from pathlib import Path
+          path = Path('scripts/pub-import-plan.py')
+          data = path.read_bytes()
+          blob = hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+          assert blob == 'cad7aca9c2867b85280326e913af0ebb64eabea5', 'source changed: review before editing'
+          text = data.decode()
+          old = """# `whitepaper/` (task #324) is its own lake library — the paper's Lean
+          # fragment, which imports nothing from `ConLeche.*` — outside the census
+          # roots of `tests/shake.sh` and outside this plan.
+          files=[f for f in subprocess.check_output(['git','ls-files','*.lean']).decode().split()
+                 if not f.startswith(('tests/e2e/src/','tests/trust-surface/','bridge/','scripts/',
+                                      'whitepaper/'))]
+          """
+          new = """# `whitepaper/` (task #324) is its own lake library — the paper's Lean
+          # fragment, which imports nothing from `ConLeche.*` — outside the census
+          # roots of `tests/shake.sh` and outside this plan.
+          # `independent/` is a separate Lake package: its modules are named
+          # PskernelC1Independent.*, NOT independent.PskernelC1Independent.*.
+          # Its own import/trust fence covers every source file, and the dedicated
+          # C1 independent foundation workflow builds and audits its proof targets.
+          # Keep the root census complete for its actual module environment.
+          if os.path.isdir('independent'):
+              assert os.path.isfile('independent/lakefile.toml'), 'independent package manifest missing'
+              subprocess.run([sys.executable, 'scripts/c1-independent-audit.py'], check=True)
+          files=[f for f in subprocess.check_output(['git','ls-files','*.lean']).decode().split()
+                 if not f.startswith(('tests/e2e/src/','tests/trust-surface/','bridge/','scripts/',
+                                      'whitepaper/','independent/'))]
+          """
+          assert text.count(old) == 1, 'reviewed edit must match exactly once'
+          changed = text.replace(old, new)
+          ast.parse(changed)
+          path.write_text(changed)
+          Path('.github/workflows/c1-scope-maintenance.yml').unlink()
+          PY
+          python3 scripts/c1-independent-audit.py
+          git diff --check
+          git diff --stat
+          git diff -- scripts/pub-import-plan.py
+      - name: Commit only the reviewed correction with a fast-forward lease
+        run: |
+          set -euo pipefail
+          git fetch origin pskernel-c1
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- scripts/pub-import-plan.py .github/workflows/c1-scope-maintenance.yml
+          git commit -m 'Audit the independent Lake package separately from root-module import census' \
+            -m 'Preserve all root dependency, public-import and fallback checks. Require the independent package manifest and run its complete source/import/trust fence before separating its different module namespace. Its dedicated cloud proof job remains required evidence. Remove the one-shot maintenance workflow.'
+          git push origin HEAD:refs/heads/pskernel-c1
+          git rev-parse HEAD
