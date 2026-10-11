@@ -15,6 +15,41 @@ for executable in "$BIN" "$BASELINE"; do
   test -x "$executable" || { echo "missing executable: $executable" >&2; exit 1; }
 done
 
+# ParInstall explicitly snapshots ONLY finished workers, without waiting.
+# On rejection every worker can still be running and the commit thread may
+# have installed no records itself. Then the correct report has zero counted
+# records and an empty top list, with the omitted workers disclosed. Requiring
+# a numeric top entry in that case made this test depend on thread scheduling.
+install_stats_present() {
+  local log=$1
+  grep -q '^con-leche: stats: install.* wall, .* busy ' "$log" || return 1
+  if grep -q '^con-leche: stats: install.* 0 records, busy ' "$log"; then
+    grep -q '^con-leche: stats: install pool ([1-9][0-9]* still running, not counted):' "$log" &&
+      grep -q '^con-leche: stats: slowest installs: $' "$log"
+  else
+    grep -q '^con-leche: stats: slowest installs: [0-9]' "$log"
+  fi
+}
+
+# Deterministic tests of both legitimate report shapes and missing data.
+contract_log="$LOGDIR/contract.stderr"
+printf '%s\n' \
+  'con-leche: stats: install pool (2 still running, not counted): 0.001s wall, 2 workers + the commit thread, 0 records, busy 0.000s (-)' \
+  'con-leche: stats: slowest installs: ' > "$contract_log"
+install_stats_present "$contract_log" || { echo 'FAIL zero-sample contract'; exit 1; }
+sed 's/0 records/1 records/' "$contract_log" > "$LOGDIR/nonempty-missing.stderr"
+if install_stats_present "$LOGDIR/nonempty-missing.stderr"; then
+  echo 'FAIL nonempty report must retain its top sample'; exit 1
+fi
+sed 's/ (2 still running, not counted)//' "$contract_log" > "$LOGDIR/undisclosed.stderr"
+if install_stats_present "$LOGDIR/undisclosed.stderr"; then
+  echo 'FAIL empty report must disclose omitted workers'; exit 1
+fi
+printf '%s\n' \
+  'con-leche: stats: install: 0.001s wall, 1 worker, 1 records, busy 0.001s (100.0%)' \
+  'con-leche: stats: slowest installs: 0.001s example' > "$contract_log"
+install_stats_present "$contract_log" || { echo 'FAIL nonempty-sample contract'; exit 1; }
+
 fail=0
 count=0
 
@@ -35,9 +70,9 @@ pair() { # expected-exit reached-phase label fixture jobs
     echo "FAIL $tag: default C1 run printed statistics"
     fail=1
   fi
-  if ! grep -q '^con-leche: stats: install.* wall, .* busy ' "$LOGDIR/$tag-on.stderr" ||
-     ! grep -q '^con-leche: stats: slowest installs: [0-9]' "$LOGDIR/$tag-on.stderr"; then
-    echo "FAIL $tag: --stats omitted install statistics"
+  if ! install_stats_present "$LOGDIR/$tag-on.stderr"; then
+    echo "FAIL $tag: --stats omitted or contradicted install statistics"
+    cat "$LOGDIR/$tag-on.stderr"
     fail=1
   fi
   if [ "$phase" = both ]; then
@@ -76,5 +111,5 @@ if [ "$baseline_exit" != 0 ] ||
   fail=1
 fi
 
-echo "C1 statistics: $count paired cases and upstream default; failures=$fail (logs: $LOGDIR)"
+echo "C1 statistics: $count paired cases, four report-contract cases and upstream default; failures=$fail (logs: $LOGDIR)"
 exit "$fail"

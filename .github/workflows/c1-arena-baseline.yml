@@ -5,6 +5,7 @@ on:
     branches: [pskernel-c1]
     paths:
       - 'scripts/c1_arena_baseline.py'
+      - 'scripts/c1-arena-observe.py'
       - 'tests/c1/test_arena_baseline.py'
       - 'tests/c1/arena-source.json'
       - '.github/workflows/c1-arena-baseline.yml'
@@ -28,6 +29,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test evidence classification and input integrity
         run: python3 -m unittest discover -s tests/c1 -p test_arena_baseline.py -v
+      - name: Report the actual cloud snapshot before enforcing its pin
+        run: python3 scripts/c1-arena-observe.py
       - name: Install pinned Lean
         run: |
           set -euo pipefail
