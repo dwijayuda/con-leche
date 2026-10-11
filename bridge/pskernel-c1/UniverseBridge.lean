@@ -19,7 +19,7 @@ that property for the future input interner is a separate obligation.
 
 namespace PskernelC1Bridge
 
-abbrev Level := PskernelC1Independent.Level
+open PskernelC1Independent
 
 /-- Decode the independent representation under an explicit name map. -/
 @[expose] def toReference (names : Nat → ConLeche.Name) : Level → ConLeche.Level
@@ -55,7 +55,7 @@ theorem fromReference_eval (ids : ConLeche.Name → Nat)
 theorem source_roundtrip (ids : ConLeche.Name → Nat) (names : Nat → ConLeche.Name)
     (faithful : ∀ name, names (ids name) = name) (level : ConLeche.Level) :
     toReference names (fromReference ids level) = level := by
-  induction level <;> simp [toReference, fromReference, faithful, *]
+  induction level <;> simp [toReference, fromReference, *]
 
 /-- The independent normalizer preserves the reference semantic meaning. -/
 theorem normalize_reference_sound (names : Nat → ConLeche.Name)
