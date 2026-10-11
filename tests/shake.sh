@@ -108,9 +108,9 @@ for entry in "${ENTRIES[@]}"; do
   printf '%s\n' "$shake_out" >> "$WORK/shake.txt" || exit 3
 done
 
-python3 - "$ALLOW" "$PWD" "$WORK/shake.txt" <<'PY' || fail=1
+python3 - "$ALLOW" "$PWD" "$WORK/shake.txt" "$WORK/new-modules.txt" <<'PY' || fail=1
 import sys
-allow_path, root, shake_out = sys.argv[1], sys.argv[2].rstrip('/') + '/', sys.argv[3]
+allow_path, root, shake_out, new_modules = sys.argv[1], sys.argv[2].rstrip('/') + '/', sys.argv[3], sys.argv[4]
 allowed = set()
 for line in open(allow_path):
     line = line.split('#', 1)[0].strip()
@@ -129,6 +129,9 @@ for line in open(shake_out).read().split('\n'):
 props = sorted(set(props))
 new = [p for p in props if p not in allowed]
 stale = sorted(allowed - set(props))
+with open(new_modules, 'w') as out:
+    for path in sorted({f for f, _ in new}):
+        out.write(path.removesuffix('.lean').replace('/', '.') + '\n')
 if new:
     print(f'SHAKE GATE FAIL — {len(new)} import removal(s) not on {allow_path}:')
     for f, i in new:
@@ -145,6 +148,22 @@ if not new and not stale:
     print(f'shake: {len(props)} removals proposed, all {len(allowed)} allowlisted')
 sys.exit(1 if (new or stale) else 0)
 PY
+
+# A new C1 proof-edge proposal needs the documented per-module criterion.
+# Print its exact difference from the noise floor in both executable views.
+# This diagnoses the failure; it neither changes the allowance nor passes it.
+if grep -Fxq 'PskernelC1.Soundness' "$WORK/new-modules.txt"; then
+  for entry in "${ENTRIES[@]}"; do
+    floor="$WORK/noise.$entry.txt"
+    candidate="$WORK/soundness.$entry.txt"
+    lake shake --keep-implied --only ConLeche.NoSuchModule \
+      "${COMMON_ROOTS[@]}" "$entry" > "$floor" 2>&1
+    lake shake --keep-implied --only PskernelC1.Soundness \
+      "${COMMON_ROOTS[@]}" "$entry" > "$candidate" 2>&1
+    echo "C1 proof import criterion ($entry): difference from the noise floor"
+    diff -u "$floor" "$candidate" || true
+  done
+fi
 
 # --- (b) the `public` keyword ---------------------------------------
 COMMON_MODS=$(git ls-files 'ConLeche/*.lean' 'PskernelC1/*.lean' | sed 's/\.lean$//;s|/|.|g' \
