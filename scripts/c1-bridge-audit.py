@@ -13,7 +13,11 @@ helper = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(helper)
 EXPECTED = {'toReference_eval', 'fromReference_eval', 'source_roundtrip',
             'normalize_reference_sound', 'compareFast_reference_sound',
-            'compareFast_source_sound', 'compareFast_inputs_sound'}
+            'compareFast_source_sound', 'compareFast_inputs_sound',
+            'encodeReferenceFinite_roundtrip', 'encodeReferenceFinite_eval',
+            'encodeReferenceFinite_complete', 'compareSourceWith_sound',
+            'compareSourceWith_different', 'compareSource_encoding_total',
+            'compareSource_sound', 'compareSource_different'}
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('log', type=Path)
@@ -23,7 +27,9 @@ code = helper.code_only(source.read_text())
 if re.search(r'\b(sorry|admit|axiom|unsafe|implemented_by|native_decide|extern)\b', code) or 'skipKernelTC' in code:
     raise ValueError('forbidden proof-bridge trust construct')
 imports = re.findall(r'^\s*(?:(?:public|meta)\s+)*import\s+(?:all\s+)?([A-Za-z0-9_.]+)', code, re.M)
-if set(imports) != {'ConLeche.Verify.Level', 'PskernelC1Independent.UniverseProofs'}:
+if set(imports) != {'ConLeche.Verify.Level', 'PskernelC1Independent.UniverseProofs',
+                    'PskernelC1Independent.UniversePolynomialProofs',
+                    'PskernelC1Independent.NameCodecProofs'}:
     raise ValueError(f'bridge dependency change requires review: {imports}')
 seen = {}
 pattern = r"'PskernelC1Bridge\.([^']+)' (?:depends on axioms: \[([^\]]*)\]|does not depend on any axioms)"

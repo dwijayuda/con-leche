@@ -2,6 +2,8 @@ module
 
 public import ConLeche.Verify.Level
 public import PskernelC1Independent.UniverseProofs
+public import PskernelC1Independent.UniversePolynomialProofs
+public import PskernelC1Independent.NameCodecProofs
 
 public section
 
@@ -98,6 +100,271 @@ theorem compareFast_inputs_sound (names : Nat → ConLeche.Name)
   rw [← leftFaithful, ← rightFaithful]
   exact compareFast_reference_sound names left right accepted assignment
 
+/-!
+## Finite input-name codec and source-level polynomial comparison
+
+Unlike a globally supplied map from every source name to a Nat, this
+encoder requires no impossible promise that a finite input table can
+encode all names. It checks every parameter in the actual input.
+
+Source-to-internal decoding is proved on every successful encoding,
+including nested imax syntax. Negative and positive polynomial verdicts
+are transported through the actual input encoder, not a guessed codec.
+-/
+
+/-- Collect every parameter occurrence, retaining duplicates on purpose.
+First-occurrence indexing gives duplicates the same stable internal ID. -/
+@[expose] def sourceParameters : ConLeche.Level → List ConLeche.Name
+  | .zero => []
+  | .succ level => sourceParameters level
+  | .max left right => sourceParameters left ++ sourceParameters right
+  | .imax left right => sourceParameters left ++ sourceParameters right
+  | .param name => [name]
+
+/-- Decode a finite name ID. The fallback is never used by a successful
+encoding; the accompanying theorem proves this for every source node. -/
+@[expose] def decodedName (table : List ConLeche.Name) (id : Nat) : ConLeche.Name :=
+  (NameCodec.get? table id).getD .anonymous
+
+/-- Fail rather than fabricate an ID when a source parameter is missing. -/
+@[expose] def encodeReferenceFinite (table : List ConLeche.Name) : ConLeche.Level → Option Level
+  | .zero => some .zero
+  | .succ level => (encodeReferenceFinite table level).map .succ
+  | .max left right => do
+      let left ← encodeReferenceFinite table left
+      let right ← encodeReferenceFinite table right
+      pure (.max left right)
+  | .imax left right => do
+      let left ← encodeReferenceFinite table left
+      let right ← encodeReferenceFinite table right
+      pure (.imax left right)
+  | .param name => (NameCodec.index? table name).map .param
+
+/-- Interpret any independent parameter assignment back on source names.
+Missing names map to zero only in this proof auxiliary; the actual
+encoder explicitly declines when an input uses a missing name. -/
+@[expose] def sourceAssignment (table : List ConLeche.Name) (assignment : Nat → Nat)
+    (name : ConLeche.Name) : Nat :=
+  match NameCodec.index? table name with
+  | some id => assignment id
+  | none => 0
+
+/-- Every successful finite encoding preserves the exact original syntax. -/
+theorem encodeReferenceFinite_roundtrip (table : List ConLeche.Name)
+    (source : ConLeche.Level) (internal : Level)
+    (encoded : encodeReferenceFinite table source = some internal) :
+    toReference (decodedName table) internal = source := by
+  induction source generalizing internal with
+  | zero =>
+    simp [encodeReferenceFinite] at encoded
+    subst internal
+    rfl
+  | succ level ih =>
+    cases h : encodeReferenceFinite table level with
+    | none => simp [encodeReferenceFinite, h] at encoded
+    | some child =>
+      simp [encodeReferenceFinite, h] at encoded
+      subst internal
+      simpa [toReference] using congrArg ConLeche.Level.succ (ih child h)
+  | max left right ihLeft ihRight =>
+    cases hl : encodeReferenceFinite table left with
+    | none => simp [encodeReferenceFinite, hl] at encoded
+    | some il =>
+      cases hr : encodeReferenceFinite table right with
+      | none => simp [encodeReferenceFinite, hl, hr] at encoded
+      | some ir =>
+        simp [encodeReferenceFinite, hl, hr] at encoded
+        subst internal
+        simp [toReference, ihLeft il hl, ihRight ir hr]
+  | imax left right ihLeft ihRight =>
+    cases hl : encodeReferenceFinite table left with
+    | none => simp [encodeReferenceFinite, hl] at encoded
+    | some il =>
+      cases hr : encodeReferenceFinite table right with
+      | none => simp [encodeReferenceFinite, hl, hr] at encoded
+      | some ir =>
+        simp [encodeReferenceFinite, hl, hr] at encoded
+        subst internal
+        simp [toReference, ihLeft il hl, ihRight ir hr]
+  | param name =>
+    cases hname : NameCodec.index? table name with
+    | none => simp [encodeReferenceFinite, hname] at encoded
+    | some id =>
+      simp [encodeReferenceFinite, hname] at encoded
+      subst internal
+      have hget := NameCodec.index?_sound table name id hname
+      simp [toReference, decodedName, hget]
+
+/-- Every successfully encoded universe has exactly the source meaning
+under the induced assignment, including arbitrary imax expressions. -/
+theorem encodeReferenceFinite_eval (table : List ConLeche.Name)
+    (source : ConLeche.Level) (internal : Level)
+    (encoded : encodeReferenceFinite table source = some internal) :
+    ∀ assignment, Level.eval assignment internal =
+      ConLeche.Level.eval (sourceAssignment table assignment) source := by
+  induction source generalizing internal with
+  | zero =>
+    simp [encodeReferenceFinite] at encoded
+    subst internal
+    intro assignment
+    rfl
+  | succ level ih =>
+    cases h : encodeReferenceFinite table level with
+    | none => simp [encodeReferenceFinite, h] at encoded
+    | some child =>
+      simp [encodeReferenceFinite, h] at encoded
+      subst internal
+      intro assignment
+      simp [Level.eval, ConLeche.Level.eval, ih child h assignment]
+  | max left right ihLeft ihRight =>
+    cases hl : encodeReferenceFinite table left with
+    | none => simp [encodeReferenceFinite, hl] at encoded
+    | some il =>
+      cases hr : encodeReferenceFinite table right with
+      | none => simp [encodeReferenceFinite, hl, hr] at encoded
+      | some ir =>
+        simp [encodeReferenceFinite, hl, hr] at encoded
+        subst internal
+        intro assignment
+        simp [Level.eval, ConLeche.Level.eval, ihLeft il hl assignment,
+          ihRight ir hr assignment]
+  | imax left right ihLeft ihRight =>
+    cases hl : encodeReferenceFinite table left with
+    | none => simp [encodeReferenceFinite, hl] at encoded
+    | some il =>
+      cases hr : encodeReferenceFinite table right with
+      | none => simp [encodeReferenceFinite, hl, hr] at encoded
+      | some ir =>
+        simp [encodeReferenceFinite, hl, hr] at encoded
+        subst internal
+        intro assignment
+        simp [Level.eval, ConLeche.Level.eval, ihLeft il hl assignment,
+          ihRight ir hr assignment]
+  | param name =>
+    cases hname : NameCodec.index? table name with
+    | none => simp [encodeReferenceFinite, hname] at encoded
+    | some id =>
+      simp [encodeReferenceFinite, hname] at encoded
+      subst internal
+      intro assignment
+      simp [Level.eval, ConLeche.Level.eval, sourceAssignment, hname]
+
+/-- A table containing every source parameter makes encoding total. -/
+theorem encodeReferenceFinite_complete (table : List ConLeche.Name)
+    (source : ConLeche.Level)
+    (covered : ∀ name ∈ sourceParameters source, name ∈ table) :
+    ∃ internal, encodeReferenceFinite table source = some internal := by
+  induction source with
+  | zero => exact ⟨.zero, rfl⟩
+  | succ level ih =>
+    obtain ⟨child, hchild⟩ := ih (by
+      intro name hname
+      exact covered name (by simpa [sourceParameters] using hname))
+    exact ⟨.succ child, by simp [encodeReferenceFinite, hchild]⟩
+  | max left right ihLeft ihRight =>
+    obtain ⟨il, hl⟩ := ihLeft (by
+      intro name hname
+      exact covered name (by simp [sourceParameters, hname]))
+    obtain ⟨ir, hr⟩ := ihRight (by
+      intro name hname
+      exact covered name (by simp [sourceParameters, hname]))
+    exact ⟨.max il ir, by simp [encodeReferenceFinite, hl, hr]⟩
+  | imax left right ihLeft ihRight =>
+    obtain ⟨il, hl⟩ := ihLeft (by
+      intro name hname
+      exact covered name (by simp [sourceParameters, hname]))
+    obtain ⟨ir, hr⟩ := ihRight (by
+      intro name hname
+      exact covered name (by simp [sourceParameters, hname]))
+    exact ⟨.imax il ir, by simp [encodeReferenceFinite, hl, hr]⟩
+  | param name =>
+    obtain ⟨id, hid⟩ := NameCodec.index?_complete table name
+      (covered name (by simp [sourceParameters]))
+    exact ⟨.param id, by simp [encodeReferenceFinite, hid]⟩
+
+/-- Compare actual exported input syntax with a shared finite name table. -/
+@[expose] def compareSourceWith (table : List ConLeche.Name)
+    (left right : ConLeche.Level) : Level.PolynomialResult :=
+  match encodeReferenceFinite table left, encodeReferenceFinite table right with
+  | some il, some ir => Level.comparePolynomial il ir
+  | _, _ => .unknown
+
+/-- A conclusive positive result is semantically valid on the exact
+source inputs, not merely on renamed internal approximations. -/
+theorem compareSourceWith_sound (table : List ConLeche.Name)
+    (left right : ConLeche.Level)
+    (accepted : compareSourceWith table left right = .equal) :
+    ∀ assignment, ConLeche.Level.eval assignment left =
+      ConLeche.Level.eval assignment right := by
+  unfold compareSourceWith at accepted
+  cases hl : encodeReferenceFinite table left with
+  | none => simp [hl] at accepted
+  | some il =>
+    cases hr : encodeReferenceFinite table right with
+    | none => simp [hl, hr] at accepted
+    | some ir =>
+      have hp : Level.comparePolynomial il ir = .equal := by
+        simpa [hl, hr] using accepted
+      have hleft := encodeReferenceFinite_roundtrip table left il hl
+      have hright := encodeReferenceFinite_roundtrip table right ir hr
+      intro assignment
+      rw [← hleft, ← hright, toReference_eval, toReference_eval]
+      exact Level.comparePolynomial_sound il ir hp _
+
+/-- A conclusive negative result is also justified: any source equality
+would entail internal equality under every Nat-valued assignment. -/
+theorem compareSourceWith_different (table : List ConLeche.Name)
+    (left right : ConLeche.Level)
+    (different : compareSourceWith table left right = .different) :
+    ¬ (∀ assignment, ConLeche.Level.eval assignment left =
+      ConLeche.Level.eval assignment right) := by
+  intro same
+  unfold compareSourceWith at different
+  cases hl : encodeReferenceFinite table left with
+  | none => simp [hl] at different
+  | some il =>
+    cases hr : encodeReferenceFinite table right with
+    | none => simp [hl, hr] at different
+    | some ir =>
+      have hp : Level.comparePolynomial il ir = .different := by
+        simpa [hl, hr] using different
+      apply Level.comparePolynomial_different il ir hp
+      intro assignment
+      rw [encodeReferenceFinite_eval table left il hl assignment,
+        encodeReferenceFinite_eval table right ir hr assignment]
+      exact same (sourceAssignment table assignment)
+
+/-- Construct the finite name table from the two actual inputs, rather
+than accepting an arbitrary map which might identify distinct names. -/
+@[expose] def compareSource (left right : ConLeche.Level) : Level.PolynomialResult :=
+  compareSourceWith (sourceParameters left ++ sourceParameters right) left right
+
+/-- Every source parameter is included in the automatically built table. -/
+theorem compareSource_encoding_total (left right : ConLeche.Level) :
+    (∃ il, encodeReferenceFinite (sourceParameters left ++ sourceParameters right)
+      left = some il) ∧
+    (∃ ir, encodeReferenceFinite (sourceParameters left ++ sourceParameters right)
+      right = some ir) := by
+  constructor
+  · exact encodeReferenceFinite_complete _ left (by
+      intro name hname
+      simp [hname])
+  · exact encodeReferenceFinite_complete _ right (by
+      intro name hname
+      simp [hname])
+
+theorem compareSource_sound (left right : ConLeche.Level)
+    (accepted : compareSource left right = .equal) :
+    ∀ assignment, ConLeche.Level.eval assignment left =
+      ConLeche.Level.eval assignment right :=
+  compareSourceWith_sound _ left right accepted
+
+theorem compareSource_different (left right : ConLeche.Level)
+    (different : compareSource left right = .different) :
+    ¬ (∀ assignment, ConLeche.Level.eval assignment left =
+      ConLeche.Level.eval assignment right) :=
+  compareSourceWith_different _ left right different
+
 #print axioms toReference_eval
 #print axioms fromReference_eval
 #print axioms source_roundtrip
@@ -105,5 +372,14 @@ theorem compareFast_inputs_sound (names : Nat → ConLeche.Name)
 #print axioms compareFast_reference_sound
 #print axioms compareFast_source_sound
 #print axioms compareFast_inputs_sound
+
+#print axioms encodeReferenceFinite_roundtrip
+#print axioms encodeReferenceFinite_eval
+#print axioms encodeReferenceFinite_complete
+#print axioms compareSourceWith_sound
+#print axioms compareSourceWith_different
+#print axioms compareSource_encoding_total
+#print axioms compareSource_sound
+#print axioms compareSource_different
 
 end PskernelC1Bridge
