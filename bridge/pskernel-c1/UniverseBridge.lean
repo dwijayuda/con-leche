@@ -365,6 +365,20 @@ theorem compareSource_different (left right : ConLeche.Level)
       ConLeche.Level.eval assignment right) :=
   compareSourceWith_different _ left right different
 
+-- These are finite source expressions, not a presumed global encoding.
+example :
+    compareSource (.max (.param (.str .anonymous "u")) (.param (.str .anonymous "v")))
+      (.max (.param (.str .anonymous "v")) (.param (.str .anonymous "u"))) = .equal := by decide
+
+example :
+    compareSource (.param (.str .anonymous "u")) (.param (.str .anonymous "v")) =
+      .different := by decide
+
+example :
+    compareSource (.imax (.param (.str .anonymous "u")) (.param (.str .anonymous "v")))
+      (.imax (.param (.str .anonymous "u")) (.param (.str .anonymous "v"))) =
+      .unknown := by decide
+
 #print axioms toReference_eval
 #print axioms fromReference_eval
 #print axioms source_roundtrip

@@ -191,3 +191,11 @@ No proof placeholders or new semantic axioms on the active implementation path. 
 Every change includes its current scope, proof obligation, negative conformance behavior and validation status. Keep `AI_WORK_STATE.md` current. Failed or pending CI is reported as such. Green historical CI never qualifies later code automatically.
 
 A release may be larger than the old one. It may not silently be less correct, less capable, harder to understand, or dependent on an unreported checking oracle just to achieve a size target.
+
+## 11. Next exact imax proof strategy (2026-10-12)
+
+The finite first-occurrence name codec and proof-only source comparison bridge are now implemented. Duplicate source occurrences share their first internal ID, and new trailing names do not renumber existing IDs. The source bridge builds a finite table from actual levels, proves roundtrip and semantic evaluation for all five level constructors, and transports sound equal/different polynomial outcomes. That is input fidelity, not yet a full kernel conversion proof.
+
+For general `imax`, use a semantically exact sign partition, not ad-hoc rewrite exceptions. Every parameter is either zero or successor. Under a fixed sign assignment, the zero/nonzero value of every `imax` right operand is determined and the branch can be compiled into a max/successor polynomial. Prove the translation for *all* residual parameter assignments. Finite exhaustive sign enumeration can then be a complete reference, although it may be exponential. A production algorithm must preserve the contract and justify resource costs. See [Lean level normalization issue 12747](https://github.com/leanprover/lean4/issues/12747) and Arena's [imax-leq](https://arena.lean-lang.org/test/bugs/level-imax-leq/) and [imax-normalization](https://arena.lean-lang.org/test/bugs/level-imax-normalization/) negative conformance cases.
+
+Semantic universe equality is not necessarily identical to the pinned official Lean kernel's algorithmic conversion relation. Measure and specify both before integrating this comparator into acceptance. C1 is a checker built by the pinned Lean toolchain, not a self-hosted compiler; proof checks do not verify that compiler, runtime or physical file IO.

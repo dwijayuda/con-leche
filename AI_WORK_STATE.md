@@ -18,12 +18,14 @@ Actual C1 capability evidence: [ARENA_BASELINE_20261012.md](docs/pskernel-c1/ARE
 
 ## Validated implementation checkpoint
 
-All implementation and proof changes are checked at source **`a2476126606850347c8a209f9ebd8adb56fecd1c`**:
+The original polynomial-component baseline passed at **`a2476126606850347c8a209f9ebd8adb56fecd1c`**. New checks are recorded separately:
 
 | Validation | Result and exact run |
 |---|---|
 | Independent library, proofs, tests and 16 capstone audits | Passed, [38173757176](https://github.com/dwijayuda/con-leche/actions/runs/38173757176) |
-| Seven-theorem universe semantic/input-fidelity bridge | Passed, [38173757189](https://github.com/dwijayuda/con-leche/actions/runs/38173757189) |
+| Seven-theorem initial universe bridge | Passed, [38173757189](https://github.com/dwijayuda/con-leche/actions/runs/38173757189) |
+| Finite name codec and 22 independent axiom guards | Passed, [38178368518](https://github.com/dwijayuda/con-leche/actions/runs/38178368518) at `0c75c9e6` |
+| Actual finite source bridge: 15 theorems | Passed, [38178500807](https://github.com/dwijayuda/con-leche/actions/runs/38178500807) at `f1d5574a` |
 | Complete root CI, including import audits and inherited standard battery | Passed, [38173757192](https://github.com/dwijayuda/con-leche/actions/runs/38173757192) |
 
 The audit/documentation checkpoint following that source pins the observed theorem dependencies without modifying any Lean function, theorem statement or regression expectation. Its own workflow results must still be read at its exact revision. A historical passing run does not automatically qualify changed sources.
@@ -60,11 +62,11 @@ General imax comparison remains open. The polynomial comparator returns unknown 
 
 `bridge/pskernel-c1/UniverseBridge.lean` proves seven contracts connecting the basic independent representation, normalization and positive fast path to inherited universe semantics. Source equality requires a faithful name codec or concrete per-input roundtrip equations.
 
-The adapter is proof-only, imports no inherited comparison algorithm, and leaves ConLeche outside the independent runtime package. The finite source-name interner and the polynomial comparator's operational/source integration remain explicit tasks. These component bridges are not the full declaration/environment/model theorem.
+The adapter is proof-only, imports no inherited comparison algorithm, and leaves ConLeche outside the independent runtime package. The generic finite codec and source-polynomial bridge are checked; integrating an actual independent checking algorithm remains open. These component bridges are not the full declaration/environment/model theorem.
 
 ### Proof assumptions
 
-All **16 independent capstone footprints are pinned exactly** to their observed subsets of `propext`, `Classical.choice`, and `Quot.sound`. No proof placeholder or added semantic axiom is accepted.
+All **22 independent capstone footprints are pinned exactly** to their observed subsets of `propext`, `Classical.choice`, and `Quot.sound`. No proof placeholder or added semantic axiom is accepted.
 
 Among the five new capstones, `toPolynomial_sound`, `comparePolynomial_sound`, and `comparePolynomial_decides` use `propext` and `Quot.sound`. `comparePolynomial_different` and `comparePolynomial_complete` additionally use `Classical.choice`. The existing eleven exact pins are preserved.
 
@@ -96,7 +98,7 @@ Initial proof elaboration issues were repaired with correct module-stage imports
 |---|---|
 | C1-N0: priorities/architecture/baseline | Implemented and committed |
 | C1-N1: actual capability inventory | Archive captured; full corpus and nine observed gaps remain |
-| C1-N2: independent foundation | Basic universe laws, complete polynomial fragment and basic semantic bridge checked; imax and input codec remain |
+| C1-N2: independent foundation | Universe laws, polynomial fragment, finite input codec and source bridge checked; imax and kernel-level conversion remain |
 | C1-N3: independent inference/conversion | Not implemented |
 | C1-N4: declaration/inductive model extension | Not implemented |
 | C1-N5: assumption-relative checking | Contract specified; generalized proof/runtime not implemented |
@@ -105,7 +107,7 @@ Initial proof elaboration issues were repaired with correct module-stage imports
 
 ## Next implementation actions
 
-Confirm the exact audit-pin checkpoint's workflow results, then complete general imax comparison with explicit zero/positive reasoning while keeping soundness and completeness separate. Implement a proved finite input-name codec and the polynomial comparator's source/operational bridge. Proceed to expression/context operations, inference/conversion rules, and declaration/inductive environment preservation.
+Complete general imax comparison using explicit zero/positive cases and distinct soundness/completeness proofs. Integrate the already checked finite source codec into a future checker acceptance path. Proceed to expression/context operations, inference/conversion rules, and declaration/inductive environment preservation.
 
 Implement assumption-relative checking only with its distinct derivation theorem and conditional model extension. Integrate the independent CLI only when its actual acceptance path connects to the model theorem. Keep full-corpus acquisition and the recorded performance case as explicit qualification work rather than running expensive corpora on every small source edit.
 
@@ -114,3 +116,11 @@ Implement assumption-relative checking only with its distinct derivation theorem
 Use GitHub/cloud Linux CI for Lean builds and checker execution. No Desktop Commander, unrelated project edits, branch deletion, or automatic PR merge. Use expected-head leases.
 
 Component proofs are not a full independent-kernel consistency theorem. Semantic universe equality does not replace all operational conversion obligations. Source proofs do not themselves verify the compiler, runtime primitives, physical IO, platform or scheduling. Keep model meanings, explicit hypotheses and this trust boundary visible.
+
+## Current finite-source milestone (2026-10-12)
+
+The independent `NameCodec` returns the first occurrence of each source name in a finite list and no name for an invalid index. Six proved contracts include decoding fidelity, existence, missing-name rejection, injectivity, and stable IDs on append. It does not depend on ConLeche checking code. The proof-only `UniverseBridge` now builds a finite table from actual exported level expressions; eight additional theorems prove encoding roundtrip and semantics for all five constructors, encode coverage and sound source-level equal/different results. All fifteen bridge capstones passed at [38178500807](https://github.com/dwijayuda/con-leche/actions/runs/38178500807). The root CI at this exact revision was running when recorded; later revisions need their own checks.
+
+Next, formalize an exact sign-case decomposition for arbitrary imax; cover each universe parameter's zero/successor branch and compile the resulting problem to the proved max/successor polynomial comparator. Prove semantic equivalence and completeness without assuming the procedure is efficient. An exponential complete reference belongs in proof/development, not automatically the production hot path. Strict official Lean conversion and semantic equality must remain separate contracts.
+
+This project is a checker, not a self-host compiler. It is built by a pinned Lean toolchain; native compiler/runtime and input IO remain trusted boundaries. Size reduction remains optional and never blocks correctness, capability or readability.

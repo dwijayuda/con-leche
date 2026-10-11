@@ -19,6 +19,18 @@ EXPECTED = {'toReference_eval', 'fromReference_eval', 'source_roundtrip',
             'compareSourceWith_different', 'compareSource_encoding_total',
             'compareSource_sound', 'compareSource_different'}
 
+# Exact dependencies observed in warning-free semantic bridge run 38178500807.
+ONLY_PROPEXT = {'toReference_eval', 'fromReference_eval', 'source_roundtrip'}
+PROPEXT_QUOT = {'encodeReferenceFinite_roundtrip', 'encodeReferenceFinite_eval',
+                'encodeReferenceFinite_complete', 'compareSourceWith_sound',
+                'compareSource_encoding_total', 'compareSource_sound'}
+EXPECTED_AXIOMS = {name: ['propext'] for name in ONLY_PROPEXT}
+EXPECTED_AXIOMS.update({name: ['Quot.sound', 'propext'] for name in PROPEXT_QUOT})
+EXPECTED_AXIOMS.update({name: sorted(helper.ALLOWED_AXIOMS)
+                        for name in EXPECTED - ONLY_PROPEXT - PROPEXT_QUOT})
+if set(EXPECTED_AXIOMS) != EXPECTED:
+    raise ValueError('bridge theorem pin census is incomplete')
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('log', type=Path)
 args = parser.parse_args()
@@ -40,5 +52,8 @@ for name, raw in re.findall(pattern, args.log.read_text()):
     seen[name] = axioms
 if set(seen) != EXPECTED:
     raise ValueError(f'bridge theorem census mismatch: {sorted(seen)}')
+for name in EXPECTED:
+    if seen[name] != EXPECTED_AXIOMS[name]:
+        raise ValueError(f'bridge axiom footprint changed: {name}: {seen[name]}')
 print(json.dumps({'scope': 'universe semantic/input-fidelity bridge, not full kernel',
                   'theorem_axioms': seen}, indent=2))
