@@ -21,8 +21,8 @@ namespace PskernelC1Independent
 
 inductive Name where
   | anonymous
-  | str (prefix : Name) (part : String)
-  | num (prefix : Name) (index : Nat)
+  | str (parent : Name) (part : String)
+  | num (parent : Name) (index : Nat)
   deriving DecidableEq, Repr, Inhabited
 
 /-- Unvalidated binder proposition-zeroness representation. Later
@@ -43,7 +43,7 @@ with an explicit type as in ConLeche; they are distinct constructors. -/
 inductive Expr where
   | bvar (index : Nat)
   | fvar (index : Nat) (type : Expr)
-  | sort (universe : Level)
+  | sort (level : Level)
   | const (name : Name) (universes : List Level)
   | app (function argument : Expr)
   | lam (domain body : Expr) (binder : BinderZero)
@@ -78,7 +78,7 @@ def lift (amount cutoff : Nat) : Expr → Expr
   | .bvar index =>
       if cutoff ≤ index then .bvar (index + amount) else .bvar index
   | .fvar index type => .fvar index (lift amount cutoff type)
-  | .sort universe => .sort universe
+  | .sort level => .sort level
   | .const name universes => .const name universes
   | .app function argument =>
       .app (lift amount cutoff function) (lift amount cutoff argument)
