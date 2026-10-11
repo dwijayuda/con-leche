@@ -3,6 +3,8 @@ module
 import PskernelC1Independent.UniversePolynomialProofs
 import PskernelC1Independent.PolynomialTests
 import PskernelC1Independent.NameCodecTests
+-- Non-public imports in the test module are not re-exported into this root.
+import PskernelC1Independent.NameCodecProofs
 -- #guard evaluates these functions during elaboration as well as using their
 -- logical definitions; the module system requires an explicit meta import.
 public meta import PskernelC1Independent.Universe
