@@ -32,6 +32,12 @@ default targets and the C1 proof and executable. `lake test` retains the
 upstream suite; CI separately builds `PskernelC1Tests` to check the C1
 capstones' axiom footprint.
 
+The CI download contains a Linux tarball with the executable, original
+license, this guide, toolchain pin, source revision and executable checksum.
+After extraction, verify `sha256sum -c SHA256SUMS` and run `./pskernel-c1`.
+Draft branches are checked on pushes; opening a draft pull request reuses
+that push validation instead of starting a duplicate cold build.
+
 The executable has four operational options:
 
 | Option | Behavior |
@@ -195,7 +201,8 @@ fixture is not a claim of a universal speedup on Mathlib.
 
 C1 inherits the supported declaration language of this pinned verified
 checker. The upstream model policy admits its supported standard axioms
-and declines arbitrary added axioms without a supplied semantic model.
+and declines arbitrary added axioms. C1 currently has no interface for
+supplying models of additional axioms.
 An arbitrary declaration `axiom bad : False` cannot be admitted under an
 unconditional model-existence guarantee. Supporting deductions relative to
 arbitrary assumptions would require a separately stated conditional
@@ -211,8 +218,8 @@ requires an actual Arena run on the C1 commit.
 
 ## Why this route was chosen
 
-Reusing the existing model-proved implementation requires the least new
-semantic proof work for a useful first checker. The original C++ Lean
+We chose the existing model-proved implementation to minimize new semantic
+proof work for a useful first checker. The original C++ Lean
 kernel is a valuable behavior and performance reference, but proving that
 implementation directly would add a language and implementation bridge.
 Starting a fresh minimal calculus would reduce the initial code while

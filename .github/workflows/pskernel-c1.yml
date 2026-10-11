@@ -90,8 +90,7 @@ jobs:
           cat _tmp/c1/perf/summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Package Linux executable
-        run: |
-          tar -czf _tmp/c1/pskernel-c1-linux-x86_64.tar.gz -C .lake/build/bin pskernel-c1
+        run: bash scripts/package-c1.sh
 
       - name: Upload evidence
         if: always()

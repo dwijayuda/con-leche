@@ -109,6 +109,7 @@ name: CI
 on:
   push:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -119,6 +120,9 @@ concurrency:
 
 jobs:
   build-and-gates:
+    # Pushes validate draft branches; avoid a duplicate cold build on opening
+    # a draft PR. Becoming ready for review runs the normal PR gate.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -222,10 +226,7 @@ jobs:
           cat _tmp/c1/perf/summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Package the C1 Linux executable
-        run: |
-          set -euo pipefail
-          mkdir -p _tmp/c1
-          tar -czf _tmp/c1/pskernel-c1-linux-x86_64.tar.gz -C .lake/build/bin pskernel-c1
+        run: bash scripts/package-c1.sh
 
       # The standard battery.  It rebuilds nothing of consequence (the
       # step above already did) and runs every gate and suite listed at

@@ -47,9 +47,18 @@ is not validation.
 
 ## Validation status
 
-Source inspection and integration are complete. Linux CI compilation and
-execution are pending the first branch push. No local Lean build or test
-has been run; the project workflow uses GitHub/cloud Linux CI.
+The initial push is `7647b8ce0383b91cb0b29879ea4622a5c1955cd1`.
+[CI run 38162036305](https://github.com/dwijayuda/con-leche/actions/runs/38162036305)
+passed the source/trust boundaries and built the inherited proof
+dependencies. It found one dependent-match elaboration error in
+`certifyResult`: its successful branch had already refined the equation,
+so the subtype requires `rfl`. That construction is corrected in the next
+commit. The run saved its successful module cache. Runtime gates have not
+run yet; the corrected branch requires another CI run.
+
+No local Lean build or checker test has been run; the project workflow uses
+GitHub/cloud Linux CI. Static source inspection and lint are separate from
+that compiler/runtime validation.
 
 No C1 performance numbers or Lean Kernel Arena score are claimed yet.
 CI measurements must be read at their exact commit and toolchain. The

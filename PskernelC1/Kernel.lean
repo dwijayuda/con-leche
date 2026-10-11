@@ -59,9 +59,9 @@ abbrev AcceptedStream :=
 /-- Attach the equation witnessed by a computed result, preserving errors. -/
 def certifyResult {ε α : Type} (result : Except ε α) :
     Except ε { value : α // result = .ok value } :=
-  match h : result with
+  match result with
   | .error e => .error e
-  | .ok value => .ok ⟨value, h⟩
+  | .ok value => .ok ⟨value, rfl⟩
 
 /-- Execute the declaration checker and return its successful-run evidence. -/
 def checkCertified (ds : Array Declaration) :
