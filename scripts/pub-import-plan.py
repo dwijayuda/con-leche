@@ -39,6 +39,13 @@ standard battery):
     $PUBPLAN_DIR/census.tsv   lake env lean --run scripts/dead-census.lean <mods>
     $PUBPLAN_DIR/pub.tsv      lake env lean --run scripts/pub-iface.lean   <mods>
 
+For alternate executable entry points, `tests/shake.sh` instead writes
+`contexts.tsv`: each row is a context label, census filename, and public
+interface filename, separated by tabs.  Filenames are relative to
+`$PUBPLAN_DIR`.  Each context keeps its own constant names and constraints;
+the same proposed import graph must satisfy all of them.  Without this
+manifest, the two single-environment inputs above remain supported.
+
 `$PUBPLAN_DIR` defaults to `_tmp/m3`.
 """
 import re, subprocess, json, collections, os, sys
@@ -758,32 +765,9 @@ for m in mods:
         if ismeta or t.startswith(EXT): continue
         if t in idx: D[m].append(t)
 
-# --- reach: every module whose constants this module mentions at all
-declmod={}
-deps=collections.defaultdict(set)
-for line in open(DIR+'/census.tsv'):
-    p=line.rstrip('\n').split('\t')
-    if len(p)<3: continue
-    declmod[p[0]]=p[1]
-for line in open(DIR+'/census.tsv'):
-    p=line.rstrip('\n').split('\t')
-    if len(p)<4: continue
-    for c in p[3].split():
-        dm=declmod.get(c)
-        if dm and dm in idx and dm!=p[1]: deps[p[1]].add(dm)
-reach={m: 0 for m in mods}
-for m,s in deps.items():
-    if m in idx: reach[m]=sum(bit[x] for x in s if x in idx)
-
-# --- opens: a bare `open N` needs N to EXIST in this module's view, which
-# means some module in its cover must declare a constant under that prefix.
-# (DESIGN #223 records this as the criterion `shake` misses.)
-nsmods=collections.defaultdict(set)
-for n,dm in declmod.items():
-    parts=n.split('.')
-    for k in range(1,len(parts)):
-        nsmods['.'.join(parts[:k])].add(dm)
-opens={}
+# --- source observations, shared by all import environments
+source_opens={}
+source_tokens={}
 for m in mods:
     src=open(fileof[m]).read()
     ns=set()
@@ -793,36 +777,95 @@ for m in mods:
         for tok in seg.replace(' in','').split():
             if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_.]*', tok) and tok not in ('in','scoped'):
                 ns.add(tok)
-    opens[m]=[sum(bit[x] for x in nsmods.get(n,()) if x in idx) for n in sorted(ns)]
-    opens[m]=[b for b in opens[m] if b]
+    source_opens[m]=sorted(ns)
+    source_tokens[m]=set(re.findall(r"[A-Za-z_][A-Za-z0-9_.'!?]*", src))
 
-# --- source identifiers: a lemma named in a TACTIC argument (`simp [f]`,
-# `exact h`, …) need not appear in the resulting proof term, so the census
-# does not see it.  Add every identifier the source mentions whose name has a
-# unique declaring module.  This can only keep MORE imports public, never
-# fewer — soundness over aggressiveness.
-sufmods=collections.defaultdict(set)
-for n,dm in declmod.items():
-    if dm not in idx: continue
-    parts=n.split('.')
-    for k in range(len(parts)):
-        sufmods['.'.join(parts[k:])].add(dm)
-srcneed={}
-for m in mods:
-    src=open(fileof[m]).read()
-    acc=0
-    for tok in set(re.findall(r"[A-Za-z_][A-Za-z0-9_.'!?]*", src)):
-        ms=sufmods.get(tok)
-        if ms and len(ms)==1:
-            d=next(iter(ms))
-            if d!=m: acc |= bit[d]
-    srcneed[m]=acc
+# Alternate executables may declare the SAME constant name (notably `main`)
+# in DIFFERENT Lean environments.  Resolve dependencies within each census;
+# never overwrite an owner with the other executable's owner.  Source-token
+# uniqueness also belongs to its environment: merging suffix maps could turn
+# a required unique name into an ambiguous name and silently drop its need.
+manifest=os.path.join(DIR, 'contexts.tsv')
+if os.path.exists(manifest):
+    inputs=[line.rstrip('\n').split('\t') for line in open(manifest)
+            if line.strip()]
+    assert inputs and all(len(p)==3 and all(p) for p in inputs), \
+        'contexts.tsv must contain label, census filename, public filename'
+    assert len({p[0] for p in inputs})==len(inputs), 'duplicate census context label'
+else:
+    inputs=[('default', 'census.tsv', 'pub.tsv')]
 
-need={m:0 for m in mods}
-for line in open(DIR+'/pub.tsv'):
-    if '\t' not in line: continue
-    m,rest=line.rstrip('\n').split('\t',1)
-    if m in idx: need[m]=sum(bit[x] for x in rest.split() if x in idx)
+contexts=[]
+seen_mods=set()
+for label,census,pub in inputs:
+    census=os.path.join(DIR, census)
+    declmod={}
+    for line in open(census):
+        p=line.rstrip('\n').split('\t')
+        if len(p)<3: continue
+        assert p[0] not in declmod or declmod[p[0]]==p[1], \
+            f'{label}: constant {p[0]} has multiple declaring modules'
+        declmod[p[0]]=p[1]
+    observed=set(declmod.values())
+    seen_mods.update(observed)
+    contexts.append({'label':label, 'census':census,
+                     'pub':os.path.join(DIR, pub), 'declmod':declmod,
+                     'observed':observed})
+
+# The old source scan also covered frozen tests/classic files with no census
+# rows.  Keep those source-only obligations in every context.  Exclude only
+# modules observed exclusively in another context, such as the other `main`.
+uncensused=set(mods)-seen_mods
+for ctx in contexts:
+    declmod=ctx.pop('declmod')
+    source_modules=(ctx['observed'] | uncensused) & set(mods)
+
+    # --- reach: every module whose constants this module mentions at all
+    deps=collections.defaultdict(set)
+    for line in open(ctx['census']):
+        p=line.rstrip('\n').split('\t')
+        if len(p)<4: continue
+        for c in p[3].split():
+            dm=declmod.get(c)
+            if dm and dm in idx and dm!=p[1]: deps[p[1]].add(dm)
+    reach={m:sum(bit[x] for x in deps[m] if x in idx) for m in mods}
+
+    # A bare `open N` needs SOME declaring module under N in its cover.
+    # Keep this disjunction separately in each context: unioning provider
+    # sets across contexts would weaken two obligations into one.
+    nsmods=collections.defaultdict(set)
+    for n,dm in declmod.items():
+        parts=n.split('.')
+        for k in range(1,len(parts)):
+            nsmods['.'.join(parts[:k])].add(dm)
+    opens={m:[] for m in mods}
+    for m in source_modules:
+        opens[m]=[sum(bit[x] for x in nsmods.get(n,()) if x in idx)
+                  for n in source_opens[m]]
+        opens[m]=[b for b in opens[m] if b]
+
+    # A lemma named in a TACTIC argument need not remain in its proof term.
+    # Add source identifiers with one declaring module IN THIS CONTEXT.
+    # These extra requirements can only retain more public imports.
+    sufmods=collections.defaultdict(set)
+    for n,dm in declmod.items():
+        if dm not in idx: continue
+        parts=n.split('.')
+        for k in range(len(parts)):
+            sufmods['.'.join(parts[k:])].add(dm)
+    for m in source_modules:
+        for tok in source_tokens[m]:
+            ms=sufmods.get(tok)
+            if ms and len(ms)==1:
+                d=next(iter(ms))
+                if d!=m: reach[m] |= bit[d]
+
+    need={m:0 for m in mods}
+    for line in open(ctx['pub']):
+        if '\t' not in line: continue
+        m,rest=line.rstrip('\n').split('\t',1)
+        if m in idx: need[m] |= sum(bit[x] for x in set(rest.split()) if x in idx)
+    ctx.update(reach=reach, need=need, opens=opens)
 
 # --- topological order
 order=[]; seen=set()
@@ -842,9 +885,10 @@ for m in order:
     acc=bit[m]
     for t in D[m]: acc |= allcl.get(t, bit.get(t,0))
     allcl[m]=acc
-for m in mods:
-    reach[m] = (reach[m] | srcneed[m]) & allcl[m]
-    need[m]  &= allcl[m]
+for ctx in contexts:
+    for m in mods:
+        ctx['reach'][m] &= allcl[m]
+        ctx['need'][m]  &= allcl[m]
 
 P={m:set(D[m]) for m in mods}                    # public imports; start: all
 
@@ -868,10 +912,15 @@ def violations(cl):
         for t in D[m]:
             cov |= cl[t]
             if t in P[m]: pubcov |= cl[t]
-        if reach[m] & ~cov: out.add(('cover', m))
-        if need[m] & ~pubcov: out.add(('pub', m))
-        for j,b in enumerate(opens[m]):
-            if not (b & cov): out.add(('open', m, j))
+        # Conjoin each environment's obligations against the SAME graph.
+        # Tag baseline exceptions by context too: an imprecision in one
+        # environment must not waive a real constraint from the other.
+        for ctx in contexts:
+            label=ctx['label']
+            if ctx['reach'][m] & ~cov: out.add(('cover', label, m))
+            if ctx['need'][m] & ~pubcov: out.add(('pub', label, m))
+            for j,b in enumerate(ctx['opens'][m]):
+                if not (b & cov): out.add(('open', label, m, j))
     return out
 
 def ok(cl):
@@ -899,7 +948,6 @@ frozen={m for m in mods
 # dependency set is silently empty and the fixpoint will happily strip it bare
 # (that is what an incomplete root list did on the first run: the whole
 # `Frontend/*` cone had no rows and lost every re-export).
-seen_mods={l.split('\t')[1] for l in open(DIR+'/census.tsv') if '\t' in l}
 missing=[m for m in mods if m not in frozen and m not in seen_mods]
 assert not missing, f'census does not cover: {missing[:6]} ({len(missing)} modules)'
 tot=sum(len(D[m]) for m in mods)

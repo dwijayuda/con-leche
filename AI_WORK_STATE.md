@@ -60,7 +60,14 @@ all 47 C1 CLI cases, eight paired statistics cases, matched measurements
 and executable packaging. The standard battery also passed its 470 e2e
 and 15 annotation fixtures and worker-count/trusted sweeps. The overall
 run failed because the import census omitted the three new C1 modules.
-The current source adds that coverage and the readability/package changes.
+The next [run, 38163597021](https://github.com/dwijayuda/con-leche/actions/runs/38163597021),
+at `6007c78c`, again passed the proof/build/runtime/package steps. It exposed
+the audit's assumption of a single executable: `Main` and `PskernelC1.Main`
+both export Lean's required global `main`, so they cannot share one import
+environment. The current audit uses separate executable environments and
+combines dependency ownership without excluding either entry point.
+The readability guides and their packaged source links are included.
+
 Each push validates the exact branch head; consult the checks linked from
 [draft PR #1](https://github.com/dwijayuda/con-leche/pull/1) for the current
 qualification result. A passing earlier revision never qualifies changed

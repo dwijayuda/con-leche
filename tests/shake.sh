@@ -31,13 +31,14 @@
 # false: the tree builds without them.)
 #
 # Running that criterion is ~300 shake invocations, minutes of CPU — too slow
-# for the standard battery.  So the gate pins the CHEAP half: one full run,
+# for the standard battery.  So the gate pins the CHEAP half: one full run
+# per executable entry point,
 # and every `remove` it proposes must be on `tests/shake-allowlist.txt`,
 # which is exactly the set the criterion rejected, one line of reason each.
 # A NEW removal is therefore a gate failure, and the response is to run the
 # criterion on that one module:
 #
-#     lake shake --keep-implied --only <Module> <the roots below>
+#     lake shake --keep-implied --only <Module> <common roots> <one entry point>
 #
 # and compare with the `--only ConLeche.NoSuchModule` floor.  If it is clean,
 # delete the import; if it is compensated, add the line to the allowlist with
@@ -82,9 +83,13 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-ROOTS="ConLeche.MainTheorem ConLeche.Verify.Cached ConLeche.Model ConLeche.Semantics ConLeche.Complete
-       ConLeche.SetModel ConLeche.Term ConLeche ConLeche.PinGen.Certs Main
-       PskernelC1.Soundness PskernelC1.Main"
+# The executables each declare global `main`, so they cannot share a Lean
+# environment.  Audit each against the FULL common proof/runtime roots;
+# neither entry point loses coverage and neither is renamed for the audit.
+COMMON_ROOTS=(ConLeche.MainTheorem ConLeche.Verify.Cached ConLeche.Model
+              ConLeche.Semantics ConLeche.Complete ConLeche.SetModel
+              ConLeche.Term ConLeche ConLeche.PinGen.Certs PskernelC1.Soundness)
+ENTRIES=(Main PskernelC1.Main)
 
 ALLOW=tests/shake-allowlist.txt
 WORK=${PUBPLAN_DIR:-_tmp/shake-gate}
@@ -92,13 +97,16 @@ mkdir -p "$WORK" || exit 3
 fail=0
 
 # --- (a) shake ------------------------------------------------------
-if ! shake_out=$(lake shake --keep-implied $ROOTS 2>&1); then :; fi
-if printf '%s\n' "$shake_out" | grep -q '^error:'; then
-  echo 'SHAKE GATE ERROR — lake shake did not run:'
-  printf '%s\n' "$shake_out" | sed 's/^/    /' | head -10
-  exit 3
-fi
-printf '%s\n' "$shake_out" > "$WORK/shake.txt"
+: > "$WORK/shake.txt" || exit 3
+for entry in "${ENTRIES[@]}"; do
+  if ! shake_out=$(lake shake --keep-implied "${COMMON_ROOTS[@]}" "$entry" 2>&1); then :; fi
+  if printf '%s\n' "$shake_out" | grep -q '^error:'; then
+    echo "SHAKE GATE ERROR — lake shake did not run for $entry:"
+    printf '%s\n' "$shake_out" | sed 's/^/    /' | head -10
+    exit 3
+  fi
+  printf '%s\n' "$shake_out" >> "$WORK/shake.txt" || exit 3
+done
 
 python3 - "$ALLOW" "$PWD" "$WORK/shake.txt" <<'PY' || fail=1
 import sys
@@ -117,6 +125,8 @@ for line in open(shake_out).read().split('\n'):
         for item in body.split(', '):
             if item.strip():
                 props.append((cur, item.strip()))
+# Common modules occur in both environments; an import edge is one proposal.
+props = sorted(set(props))
 new = [p for p in props if p not in allowed]
 stale = sorted(allowed - set(props))
 if new:
@@ -137,14 +147,31 @@ sys.exit(1 if (new or stale) else 0)
 PY
 
 # --- (b) the `public` keyword ---------------------------------------
-MODS=$(git ls-files 'ConLeche/*.lean' 'PskernelC1/*.lean' | sed 's/\.lean$//;s|/|.|g' \
-        | grep -v '^ConLeche\.Challenge$'; echo ConLeche; echo Main)
-if ! lake env lean --run scripts/dead-census.lean $MODS > "$WORK/census.tsv" 2> "$WORK/census.err" \
-   || ! lake env lean --run scripts/pub-iface.lean $MODS > "$WORK/pub.tsv" 2> "$WORK/pub.err"; then
-  echo 'SHAKE GATE ERROR — the census/interface dump failed:'
-  cat "$WORK/census.err" "$WORK/pub.err" 2>/dev/null | sed 's/^/    /' | head -10
-  exit 3
-fi
+COMMON_MODS=$(git ls-files 'ConLeche/*.lean' 'PskernelC1/*.lean' | sed 's/\.lean$//;s|/|.|g' \
+        | grep -Ev '^(ConLeche\.Challenge|PskernelC1\.Main)$'; echo ConLeche)
+: > "$WORK/census.tsv" || exit 3
+: > "$WORK/pub.tsv" || exit 3
+: > "$WORK/contexts.tsv.tmp" || exit 3
+for entry in "${ENTRIES[@]}"; do
+  census="census.$entry.tsv"
+  pub="pub.$entry.tsv"
+  : > "$WORK/$pub.err" || exit 3
+  if ! lake env lean --run scripts/dead-census.lean $COMMON_MODS "$entry" \
+        > "$WORK/$census" 2> "$WORK/$census.err" \
+     || ! lake env lean --run scripts/pub-iface.lean $COMMON_MODS "$entry" \
+        > "$WORK/$pub" 2> "$WORK/$pub.err"; then
+    echo "SHAKE GATE ERROR — the census/interface dump failed for $entry:"
+    cat "$WORK/$census.err" "$WORK/$pub.err" 2>/dev/null | sed 's/^/    /' | head -10
+    exit 3
+  fi
+  cat "$WORK/$census" >> "$WORK/census.tsv" || exit 3
+  cat "$WORK/$pub" >> "$WORK/pub.tsv" || exit 3
+  printf '%s\t%s\t%s\n' "$entry" "$census" "$pub" >> "$WORK/contexts.tsv.tmp" || exit 3
+done
+# Keep combined dumps for inspection, but preserve each context for name
+# resolution and source-only obligations in the planner.  Publish its input
+# manifest only after all context pairs have completed successfully.
+mv "$WORK/contexts.tsv.tmp" "$WORK/contexts.tsv" || exit 3
 pubout=$(PUBPLAN_DIR="$WORK" python3 scripts/pub-import-plan.py --check 2>&1); pubst=$?
 printf '%s\n' "$pubout" | grep -v '^model imprecision (' | grep -v '^model imprecision at'
 [ "$pubst" = 0 ] || fail=1
