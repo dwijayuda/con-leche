@@ -50,3 +50,7 @@ Cloud Linux CI builds the proofs and regression examples warning-free, scans all
 Optimized kernel-compatible operational imax comparison, checker-level integration of the proved finite source-name codec, expression/context operations, inference, conversion, declaration/inductive installation, the assumption-relative policy, parser/driver integration, and the independent checker-to-model theorem are not implemented here yet.
 
 The list-based polynomial dominance implementation is a readable correctness baseline; no hot-path performance superiority is claimed. No full-Arena, full-independent-kernel, speedup, or binary-size claim follows from these component proofs.
+
+## Independent expression and scope foundation (in development)
+
+The new independent `Expr` AST preserves ten kernel expression constructors (including locally nameless `fvar`s and typed annotations). Binder propositions are untrusted structured input until the later kernel checker validates their semantic meaning; duplicate or unordered annotation parameters are NOT silently assumed canonical. A separate structural `Scoped` judgment and a runnable scope checker specify variable-depth correctness. Capture-safe raising shifts only variables above the cutoff and increments the cutoff when entering binder bodies, not their types or let values. The scope-preservation theorem belongs to the independent checker foundations, not a proof of inference/conversion or declaration checking. Follow its exact cloud CI result before claiming qualification.

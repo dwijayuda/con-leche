@@ -45,6 +45,9 @@ for _name in ('signed_reconstruct', 'signPatterns_cover'):
     EXPECTED_AXIOMS[_name] = sorted(['propext', 'Quot.sound'])
 for _name in ('compareExhaustive_correct', 'compareExhaustive_different'):
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
+EXPR_CAPSTONES = {'checkScoped_sound', 'checkScoped_complete', 'checkScoped_iff', 'Scoped.lift', 'checkScoped_lift'}
+EXPR_PREFIX = 'PskernelC1Independent.Expr.'
+# New expression proof assumptions are audited by exact output after first CI compilation.
 if set(EXPECTED_AXIOMS) != CAPSTONES:
     raise ValueError('every active capstone must have an exact dependency pin')
 
@@ -121,14 +124,14 @@ def audit_axioms(log: str) -> dict[str, list[str]]:
     pattern = r"'([^']+)' (?:depends on axioms: \[([^\]]*)\]|does not depend on any axioms)"
     seen: dict[str, list[str]] = {}
     for name, raw in re.findall(pattern, log):
-        if name.startswith(PREFIX) or name.startswith(CODEC_PREFIX):
+        if name.startswith(PREFIX) or name.startswith(CODEC_PREFIX) or name.startswith(EXPR_PREFIX):
             axioms = sorted(a.strip() for a in raw.split(',') if a.strip())
             if set(axioms) - ALLOWED_AXIOMS:
                 raise ValueError(f'unapproved theorem dependency: {name}: {axioms}')
             if name in seen and seen[name] != axioms:
                 raise ValueError(f'inconsistent repeated audit: {name}')
             seen[name] = axioms
-    expected = {PREFIX + name for name in CAPSTONES} | {CODEC_PREFIX + name for name in CODEC_CAPSTONES}
+    expected = {PREFIX + name for name in CAPSTONES} | {CODEC_PREFIX + name for name in CODEC_CAPSTONES} | {EXPR_PREFIX + name for name in EXPR_CAPSTONES}
     if set(seen) != expected:
         raise ValueError(f'capstone census mismatch; missing={sorted(expected-set(seen))}, extra={sorted(set(seen)-expected)}')
     for short, axioms in EXPECTED_AXIOMS.items():
