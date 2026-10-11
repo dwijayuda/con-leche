@@ -1,3 +1,4 @@
 module
 
 public import PskernelC1Independent.UniversePolynomialProofs
+public import PskernelC1Independent.NameCodecProofs

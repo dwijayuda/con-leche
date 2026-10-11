@@ -18,6 +18,8 @@ POLYNOMIAL_CAPSTONES = {'toPolynomial_sound', 'comparePolynomial_sound',
                        'comparePolynomial_decides'}
 CAPSTONES = BASE_CAPSTONES | POLYNOMIAL_CAPSTONES
 PREFIX = 'PskernelC1Independent.Level.'
+CODEC_PREFIX = 'PskernelC1Independent.NameCodec.'
+CODEC_CAPSTONES = {'get?_mem', 'index?_sound', 'index?_complete', 'index?_none_iff', 'index?_injective', 'index?_append_left'}
 ALLOWED_AXIOMS = {'propext', 'Classical.choice', 'Quot.sound'}
 EXPECTED_AXIOMS = {name: ['propext'] for name in BASE_CAPSTONES}
 EXPECTED_AXIOMS['eval_maxSmart'] = sorted(['propext', 'Quot.sound'])
@@ -105,14 +107,14 @@ def audit_axioms(log: str) -> dict[str, list[str]]:
     pattern = r"'([^']+)' (?:depends on axioms: \[([^\]]*)\]|does not depend on any axioms)"
     seen: dict[str, list[str]] = {}
     for name, raw in re.findall(pattern, log):
-        if name.startswith(PREFIX):
+        if name.startswith(PREFIX) or name.startswith(CODEC_PREFIX):
             axioms = sorted(a.strip() for a in raw.split(',') if a.strip())
             if set(axioms) - ALLOWED_AXIOMS:
                 raise ValueError(f'unapproved theorem dependency: {name}: {axioms}')
             if name in seen and seen[name] != axioms:
                 raise ValueError(f'inconsistent repeated audit: {name}')
             seen[name] = axioms
-    expected = {PREFIX + name for name in CAPSTONES}
+    expected = {PREFIX + name for name in CAPSTONES} | {CODEC_PREFIX + name for name in CODEC_CAPSTONES}
     if set(seen) != expected:
         raise ValueError(f'capstone census mismatch; missing={sorted(expected-set(seen))}, extra={sorted(set(seen)-expected)}')
     for short, axioms in EXPECTED_AXIOMS.items():

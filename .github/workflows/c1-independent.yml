@@ -46,7 +46,7 @@ jobs:
             echo '::error::Independent proof/test build must be warning-free.'
             exit 1
           fi
-      - name: Audit all sixteen named theorem dependencies against exact pins
+      - name: Audit sixteen pinned and six new source-name proof dependencies
         run: python3 scripts/c1-independent-audit.py --axioms _tmp/c1-next/independent-axioms.log
       - name: Publish proof evidence
         if: always()
