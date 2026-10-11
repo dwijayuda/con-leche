@@ -26,7 +26,7 @@ theorem checkScoped_sound (term : Expr) (db fv : Nat)
     have hs : index < fv ∧ checkScoped db fv type = true := by
       simpa [checkScoped, Bool.and_eq_true, decide_eq_true_eq] using h
     exact Scoped.fvar hs.1 (ih db fv hs.2)
-  | sort universe => exact Scoped.sort
+  | sort level => exact Scoped.sort
   | const name universes => exact Scoped.const
   | app function argument ihf iha =>
     have hs : checkScoped db fv function = true ∧
@@ -72,40 +72,77 @@ theorem checkScoped_iff (db fv : Nat) (term : Expr) :
     checkScoped db fv term = true ↔ Scoped db fv term :=
   ⟨checkScoped_sound term db fv, checkScoped_complete⟩
 
-/-- Raising preserves scope for any cutoff within the current binder
-depth. This covers nested binders, let bodies and fvar type annotations. -/
+/-- Raising preserves scope for any cutoff inside the ambient binder
+depth. Induction is over the expression's structure, so the depth at
+each nested binder is explicit and cannot be confused with the
+original theorem's outer depth. -/
+theorem lift_preserves_scope (term : Expr) (db fv amount cutoff : Nat)
+    (h : Scoped db fv term) (hc : cutoff ≤ db) :
+    Scoped (db + amount) fv (Expr.lift amount cutoff term) := by
+  induction term generalizing db fv cutoff with
+  | bvar index =>
+    cases h with
+    | bvar hi =>
+      by_cases hcut : cutoff ≤ index
+      · have hb : index + amount < db + amount := by omega
+        simpa [Expr.lift, hcut] using
+          (Scoped.bvar (db := db + amount) (fv := fv) hb)
+      · have hb : index < db + amount := by omega
+        simpa [Expr.lift, hcut] using
+          (Scoped.bvar (db := db + amount) (fv := fv) hb)
+  | fvar index type ih =>
+    cases h with
+    | fvar hi htype =>
+      simpa [Expr.lift] using
+        (Scoped.fvar hi (ih db fv cutoff htype hc))
+  | sort level =>
+    exact Scoped.sort
+  | const name levels =>
+    exact Scoped.const
+  | app function argument ihFunction ihArgument =>
+    cases h with
+    | app hf ha =>
+      simpa [Expr.lift] using
+        (Scoped.app (ihFunction db fv cutoff hf hc)
+          (ihArgument db fv cutoff ha hc))
+  | lam domain body binder ihDomain ihBody =>
+    cases h with
+    | lam hd hb =>
+      have hcBody : cutoff + 1 ≤ db + 1 := by omega
+      have hdomain := ihDomain db fv cutoff hd hc
+      have hbody := ihBody (db + 1) fv (cutoff + 1) hb hcBody
+      simpa [Expr.lift, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+        using Scoped.lam hdomain hbody
+  | forallE domain body binder ihDomain ihBody =>
+    cases h with
+    | forallE hd hb =>
+      have hcBody : cutoff + 1 ≤ db + 1 := by omega
+      have hdomain := ihDomain db fv cutoff hd hc
+      have hbody := ihBody (db + 1) fv (cutoff + 1) hb hcBody
+      simpa [Expr.lift, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+        using Scoped.forallE hdomain hbody
+  | letE type value body ihType ihValue ihBody =>
+    cases h with
+    | letE ht hv hb =>
+      have hcBody : cutoff + 1 ≤ db + 1 := by omega
+      have htype := ihType db fv cutoff ht hc
+      have hvalue := ihValue db fv cutoff hv hc
+      have hbody := ihBody (db + 1) fv (cutoff + 1) hb hcBody
+      simpa [Expr.lift, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+        using Scoped.letE htype hvalue hbody
+  | lit literal =>
+    exact Scoped.lit
+  | proj name field value ih =>
+    cases h with
+    | proj hvalue =>
+      simpa [Expr.lift] using
+        (Scoped.proj (ih db fv cutoff hvalue hc))
+
+/-- A usable proof method on the actual structural scope judgment. -/
 theorem Scoped.lift {db fv : Nat} {term : Expr}
     (h : Scoped db fv term) (amount cutoff : Nat) (hc : cutoff ≤ db) :
-    Scoped (db + amount) fv (Expr.lift amount cutoff term) := by
-  induction h generalizing cutoff with
-  | @bvar db fv index hi =>
-    by_cases hcut : cutoff ≤ index
-    · simpa [Expr.lift, hcut] using
-        (Scoped.bvar (db := db + amount) (fv := fv)
-          (show index + amount < db + amount by omega))
-    · have hb : index < db + amount := by omega
-      simpa [Expr.lift, hcut] using (Scoped.bvar (db := db + amount) (fv := fv) hb)
-  | fvar hi _ ih =>
-    simpa [Expr.lift] using (Scoped.fvar hi (ih cutoff hc))
-  | sort => exact Scoped.sort
-  | const => exact Scoped.const
-  | app _ _ ihf iha =>
-    simpa [Expr.lift] using Scoped.app (ihf cutoff hc) (iha cutoff hc)
-  | lam _ _ ihd ihb =>
-    have hbody : cutoff + 1 ≤ db + 1 := by omega
-    simpa [Expr.lift, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
-      using Scoped.lam (ihd cutoff hc) (ihb (cutoff + 1) hbody)
-  | forallE _ _ ihd ihb =>
-    have hbody : cutoff + 1 ≤ db + 1 := by omega
-    simpa [Expr.lift, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
-      using Scoped.forallE (ihd cutoff hc) (ihb (cutoff + 1) hbody)
-  | letE _ _ _ iht ihv ihb =>
-    have hbody : cutoff + 1 ≤ db + 1 := by omega
-    simpa [Expr.lift, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
-      using Scoped.letE (iht cutoff hc) (ihv cutoff hc) (ihb (cutoff + 1) hbody)
-  | lit => exact Scoped.lit
-  | proj _ ih =>
-    simpa [Expr.lift] using Scoped.proj (ih cutoff hc)
+    Scoped (db + amount) fv (Expr.lift amount cutoff term) :=
+  lift_preserves_scope term db fv amount cutoff h hc
 
 /-- Executable bound-scope checking cannot be broken by a correct lift. -/
 theorem checkScoped_lift (term : Expr) (db fv amount cutoff : Nat)
