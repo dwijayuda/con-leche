@@ -39,8 +39,12 @@ for _name in ('comparePolynomial_different', 'comparePolynomial_complete'):
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
 for _name in SIGN_CAPSTONES:
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)  # Exact results observed in run 38179075499.
-for _name in ALL_SIGN_CAPSTONES:
-    EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)  # Reviewed after first proof-run evidence.
+# Exact capstone footprints observed in proof run 38179321642.
+EXPECTED_AXIOMS['eval_ext_parameterIds'] = ['propext']
+for _name in ('signed_reconstruct', 'signPatterns_cover'):
+    EXPECTED_AXIOMS[_name] = sorted(['propext', 'Quot.sound'])
+for _name in ('compareExhaustive_correct', 'compareExhaustive_different'):
+    EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
 if set(EXPECTED_AXIOMS) != CAPSTONES:
     raise ValueError('every active capstone must have an exact dependency pin')
 
