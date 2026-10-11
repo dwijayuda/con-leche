@@ -14,7 +14,11 @@ open PskernelC1Independent.Level
 -- A known-positive RHS makes imax a max, but the left term still matters.
 #guard compareSigned (fun id => id == 0) (.imax (.param 1) (.param 0))
   (.max (.param 1) (.param 0)) = true
+-- If only the right parameter is positive, the left is exactly zero:
+-- imax(0, succ n) = succ n. With BOTH positive, the left can dominate.
 #guard compareSigned (fun id => id == 0) (.imax (.param 1) (.param 0))
+  (.param 0) = true
+#guard compareSigned (fun _ => true) (.imax (.param 1) (.param 0))
   (.param 0) = false
 
 -- Nested imax, repeated terms, and successor offsets.
