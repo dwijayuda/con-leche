@@ -24,7 +24,7 @@ EXPECTED = {'toReference_eval', 'fromReference_eval', 'source_roundtrip',
 
 # Exact dependencies observed in warning-free semantic bridge run 38178500807.
 ONLY_PROPEXT = {'toReference_eval', 'fromReference_eval', 'source_roundtrip'}
-PROPEXT_QUOT = {'encodeReferenceFinite_roundtrip', 'encodeReferenceFinite_eval',
+PROPEXT_QUOT = {'compareSourceExact_total', 'encodeReferenceFinite_roundtrip', 'encodeReferenceFinite_eval',
                 'encodeReferenceFinite_complete', 'compareSourceWith_sound',
                 'compareSource_encoding_total', 'compareSource_sound'}
 EXPECTED_AXIOMS = {name: ['propext'] for name in ONLY_PROPEXT}

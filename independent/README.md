@@ -11,10 +11,12 @@ Read the [architecture and priorities](../PSKERNEL_C1_NEXT_ARCHITECTURE.md) firs
 | `Universe.lean` | Owned zero/successor/max/imax/parameter syntax; evaluation; simultaneous substitution; renaming; conservative normalization; positive equality fast path |
 | `UniverseProofs.lean` | Eleven substitution, renaming, semantic-preservation, positive-verdict, and explicit-incompleteness contracts |
 | `UniversePolynomial.lean` | Finite maxima of constants and parameter-offset atoms; dominance comparison; complete comparator for the imax-free fragment |
+| `UniverseSignCases.lean` and `UniverseSignCasesProofs.lean` | Exact zero/successor sign analysis of nested imax; four verified fixed-sign branch contracts |
+| `UniverseAllSigns.lean` and `UniverseAllSignsProofs.lean` | Complete semantic equality reference via finite sign enumeration; five proofs including a global iff and justified negative result (exponential, not on the runtime hot path) |
 | `NameCodec.lean` and `NameCodecProofs.lean` | Independent finite first-occurrence name IDs, partial decoder and six proof contracts; no name alias or unstable existing IDs |
 | `NameCodecTests.lean` | Source-identity regression tests |
 | `UniversePolynomialProofs.lean` | Evaluation preservation, dominance soundness/completeness, sound positive and negative verdicts, and complete/conclusive comparison for the supported fragment |
-| `PolynomialTests.lean` and `PskernelC1IndependentTests.lean` | Forty-three regression guards, six theorem examples, and twenty-two named capstone audits |
+| `PolynomialTests.lean` and `PskernelC1IndependentTests.lean` | At least fifty regression guards, seven theorem examples, and thirty-one named capstone audits |
 
 The polynomial comparator handles arbitrary nesting of zero, parameters, successor, and max. Tests cover reordered/grouped maxima, duplicate terms, successor distribution, dominated offsets, and distinct constant floors. Its completeness proof uses an explicit separating parameter assignment; it does not assume a unique canonical form or rely on finitely sampled assignments.
 
@@ -45,6 +47,6 @@ Cloud Linux CI builds the proofs and regression examples warning-free, scans all
 
 ## Still required
 
-General imax comparison, checker-level integration of the proved finite source-name codec, expression/context operations, inference, conversion, declaration/inductive installation, the assumption-relative policy, parser/driver integration, and the independent checker-to-model theorem are not implemented here yet.
+Optimized kernel-compatible operational imax comparison, checker-level integration of the proved finite source-name codec, expression/context operations, inference, conversion, declaration/inductive installation, the assumption-relative policy, parser/driver integration, and the independent checker-to-model theorem are not implemented here yet.
 
 The list-based polynomial dominance implementation is a readable correctness baseline; no hot-path performance superiority is claimed. No full-Arena, full-independent-kernel, speedup, or binary-size claim follows from these component proofs.

@@ -66,7 +66,7 @@ The adapter is proof-only, imports no inherited comparison algorithm, and leaves
 
 ### Proof assumptions
 
-All **22 independent capstone footprints are pinned exactly** to their observed subsets of `propext`, `Classical.choice`, and `Quot.sound`. No proof placeholder or added semantic axiom is accepted.
+All **31 independent capstone footprints are pinned exactly** to their observed subsets of `propext`, `Classical.choice`, and `Quot.sound`. No proof placeholder or added semantic axiom is accepted.
 
 Among the five new capstones, `toPolynomial_sound`, `comparePolynomial_sound`, and `comparePolynomial_decides` use `propext` and `Quot.sound`. `comparePolynomial_different` and `comparePolynomial_complete` additionally use `Classical.choice`. The existing eleven exact pins are preserved.
 
@@ -124,3 +124,11 @@ The independent `NameCodec` returns the first occurrence of each source name in 
 Next, formalize an exact sign-case decomposition for arbitrary imax; cover each universe parameter's zero/successor branch and compile the resulting problem to the proved max/successor polynomial comparator. Prove semantic equivalence and completeness without assuming the procedure is efficient. An exponential complete reference belongs in proof/development, not automatically the production hot path. Strict official Lean conversion and semantic equality must remain separate contracts.
 
 This project is a checker, not a self-host compiler. It is built by a pinned Lean toolchain; native compiler/runtime and input IO remain trusted boundaries. Size reduction remains optional and never blocks correctness, capability or readability.
+
+## Complete semantic universe reference and source lifting (2026-10-12)
+
+The independent `UniverseSignCases` layer now decomposes arbitrary nested `imax` at each parameter zero/positive sign and compiles fixed-sign branches to the proved max/successor polynomial comparator. Its four proof contracts cover zero tests, evaluation, iff for fixed-sign comparison, and general successor inequality. `UniverseAllSigns` enumerates finite sign assignments and has five additional kernel-checked proofs: finite parameter dependence, signed reconstruction, sign-pattern coverage, `compareExhaustive_correct` (global semantic iff), and justified negative results. Exact 31-capstone independent evidence is [run 38179387294](https://github.com/dwijayuda/con-leche/actions/runs/38179387294) at `e9ea555`.
+
+The separate proof-only bridge lifts the full general-imax comparator to exported `ConLeche.Level` with the proved finite name codec, derives total encoded source comparison, a positive iff theorem and a negative semantic witness, and includes three full-source imax regressions. The bridge compiled all 20 theorem statements in [run 38179478229](https://github.com/dwijayuda/con-leche/actions/runs/38179478229); its final audit failed because the newly observed `compareSourceExact_total` axiom footprint uses only `propext` and `Quot.sound`. The following audit update pins that exact set. A new passing workflow at its exact commit is required for qualification.
+
+The exhaustive sign reference is potentially exponential and **not** a production-ready fast comparator or a proof of the official Lean algorithmic conversion relation. It is a sound and complete semantics specification for subsequent optimized, versioned operational mechanisms. Production CLI still inherits ConLeche and has not gained arbitrary axiom/unsafe capability or a new Arena score.
