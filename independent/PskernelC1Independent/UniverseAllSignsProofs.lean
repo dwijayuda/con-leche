@@ -52,7 +52,7 @@ theorem signed_reconstruct (assignment : Nat → Nat) (id : Nat) :
     signedAssignment (signsOf assignment) (residualOf assignment) id =
       assignment id := by
   by_cases h : assignment id = 0
-  · simp [signedAssignment, signsOf, residualOf, h]
+  · simp [signedAssignment, signsOf, h]
   · simp [signedAssignment, signsOf, residualOf, h]
     omega
 
@@ -103,6 +103,7 @@ theorem compareExhaustive_correct (left right : Level) :
     have reconstruct : ∀ id ∈ parameterIds left ++ parameterIds right,
         signedAssignment flags (residualOf assignment) id = assignment id := by
       intro id present
+      change (if flags id then residualOf assignment id + 1 else 0) = assignment id
       rw [hagree id present]
       exact signed_reconstruct assignment id
     have hl := eval_ext_parameterIds left
