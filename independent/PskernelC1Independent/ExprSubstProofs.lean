@@ -42,6 +42,56 @@ theorem lift_zero (term : Expr) (cutoff : Nat) : lift 0 cutoff term = term := by
   | proj name field value ih =>
     simp [lift, ih cutoff]
 
+/-- Raising above every loose bound variable changes nothing.
+This applies under arbitrarily nested binders and is the premise for
+matching the inherited, closed-replacement instantiation algorithm. -/
+theorem lift_above_scope (term : Expr) (db fv cutoff amount : Nat)
+    (hc : db ≤ cutoff) (h : Scoped db fv term) :
+    lift amount cutoff term = term := by
+  induction term generalizing db fv cutoff with
+  | bvar i =>
+    cases h with
+    | bvar hi =>
+      have hnot : ¬ cutoff ≤ i := by omega
+      simp [lift, hnot]
+  | fvar index type ih =>
+    rfl
+  | sort level => rfl
+  | const name levels => rfl
+  | app function argument ihf iha =>
+    cases h with
+    | app hf ha =>
+      simp [lift, ihf db fv cutoff hc hf, iha db fv cutoff hc ha]
+  | lam domain body binder ihd ihb =>
+    cases h with
+    | lam hd hb =>
+      have hcBody : db + 1 ≤ cutoff + 1 := Nat.add_le_add_right hc 1
+      simp [lift, ihd db fv cutoff hc hd,
+        ihb (db + 1) fv (cutoff + 1) hcBody hb]
+  | forallE domain body binder ihd ihb =>
+    cases h with
+    | forallE hd hb =>
+      have hcBody : db + 1 ≤ cutoff + 1 := Nat.add_le_add_right hc 1
+      simp [lift, ihd db fv cutoff hc hd,
+        ihb (db + 1) fv (cutoff + 1) hcBody hb]
+  | letE type value body iht ihv ihb =>
+    cases h with
+    | letE ht hv hb =>
+      have hcBody : db + 1 ≤ cutoff + 1 := Nat.add_le_add_right hc 1
+      simp [lift, iht db fv cutoff hc ht, ihv db fv cutoff hc hv,
+        ihb (db + 1) fv (cutoff + 1) hcBody hb]
+  | lit literal => rfl
+  | proj name field value ih =>
+    cases h with
+    | proj hv =>
+      simp [lift, ih db fv cutoff hc hv]
+
+/-- An fvar-opened, bound-variable-closed argument never needs shifting,
+regardless of the number of intervening binders. -/
+theorem lift_closed (term : Expr) (fv amount cutoff : Nat)
+    (h : Scoped 0 fv term) : lift amount cutoff term = term :=
+  lift_above_scope term 0 fv cutoff amount (Nat.zero_le _) h
+
 /-- The first bound variable instantiates to the replacement verbatim. -/
 theorem instantiate1_bvar0 (replacement : Expr) :
     instantiate1 (.bvar 0) replacement = replacement := by

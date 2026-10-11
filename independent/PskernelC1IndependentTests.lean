@@ -101,3 +101,6 @@ example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
 #print axioms PskernelC1Independent.Expr.instantiate1_bvar0
 #print axioms PskernelC1Independent.Expr.instantiateAt_preserves_scope
 #print axioms PskernelC1Independent.Expr.instantiate1_preserves_scope
+
+#print axioms PskernelC1Independent.Expr.lift_above_scope
+#print axioms PskernelC1Independent.Expr.lift_closed

@@ -47,7 +47,7 @@ for _name in ('compareExhaustive_correct', 'compareExhaustive_different'):
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
 EXPR_CAPSTONES = {'checkScoped_sound', 'checkScoped_complete', 'checkScoped_iff', 'Scoped.lift', 'checkScoped_lift',
                    'lift_zero', 'instantiate1_bvar0', 'instantiateAt_preserves_scope',
-                   'instantiate1_preserves_scope'}
+                   'instantiate1_preserves_scope', 'lift_above_scope', 'lift_closed'}
 EXPR_PREFIX = 'PskernelC1Independent.Expr.'
 # New expression proof assumptions are audited by exact output after first CI compilation.
 if set(EXPECTED_AXIOMS) != CAPSTONES:
