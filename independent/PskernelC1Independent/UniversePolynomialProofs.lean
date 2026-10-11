@@ -90,7 +90,14 @@ theorem evalTerms_baseMax (assignment : Nat → Nat) (first second : Nat) :
   | atom :: rest => by
     simp only [evalTerms]
     rw [evalTerms_baseMax assignment first second rest]
-    rw [← Nat.max_assoc, Nat.max_comm (Atom.eval assignment atom) first, Nat.max_assoc]
+    calc
+      Nat.max (Atom.eval assignment atom) (Nat.max first (evalTerms assignment second rest)) =
+          Nat.max (Nat.max (Atom.eval assignment atom) first) (evalTerms assignment second rest) :=
+        (Nat.max_assoc _ _ _).symm
+      _ = Nat.max (Nat.max first (Atom.eval assignment atom)) (evalTerms assignment second rest) :=
+        congrArg (fun n => Nat.max n (evalTerms assignment second rest)) (Nat.max_comm _ _)
+      _ = Nat.max first (Nat.max (Atom.eval assignment atom) (evalTerms assignment second rest)) :=
+        Nat.max_assoc _ _ _
 
 theorem evalTerms_append (assignment : Nat → Nat) (first second : Nat) :
     ∀ left right, evalTerms assignment (Nat.max first second) (left ++ right) =
