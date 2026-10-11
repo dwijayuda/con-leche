@@ -18,7 +18,8 @@ POLYNOMIAL_CAPSTONES = {'toPolynomial_sound', 'comparePolynomial_sound',
                        'comparePolynomial_decides'}
 SIGN_CAPSTONES = {'zeroAtSigns_spec', 'compileSigned_eval',
                    'compareSigned_correct', 'compareSigned_successor_different'}
-CAPSTONES = BASE_CAPSTONES | POLYNOMIAL_CAPSTONES | SIGN_CAPSTONES
+ALL_SIGN_CAPSTONES = {'eval_ext_parameterIds', 'signed_reconstruct', 'signPatterns_cover', 'compareExhaustive_correct', 'compareExhaustive_different'}
+CAPSTONES = BASE_CAPSTONES | POLYNOMIAL_CAPSTONES | SIGN_CAPSTONES | ALL_SIGN_CAPSTONES
 PREFIX = 'PskernelC1Independent.Level.'
 CODEC_PREFIX = 'PskernelC1Independent.NameCodec.'
 CODEC_CAPSTONES = {'get?_mem', 'index?_sound', 'index?_complete', 'index?_none_iff', 'index?_injective', 'index?_append_left'}
@@ -38,6 +39,8 @@ for _name in ('comparePolynomial_different', 'comparePolynomial_complete'):
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
 for _name in SIGN_CAPSTONES:
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)  # Exact results observed in run 38179075499.
+for _name in ALL_SIGN_CAPSTONES:
+    EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)  # Reviewed after first proof-run evidence.
 if set(EXPECTED_AXIOMS) != CAPSTONES:
     raise ValueError('every active capstone must have an exact dependency pin')
 
