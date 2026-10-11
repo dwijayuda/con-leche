@@ -111,16 +111,18 @@ theorem lift_preserves_scope (term : Expr) (db fv amount cutoff : Nat)
       have hcBody : cutoff + 1 ≤ db + 1 := by omega
       have hdomain := ihDomain db fv cutoff hd hc
       have hbody := ihBody (db + 1) fv (cutoff + 1) hb hcBody
-      simpa [Expr.lift, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
-        using Scoped.lam hdomain hbody
+      have hbody' : Scoped (db + amount + 1) fv (Expr.lift amount (cutoff + 1) body) := by
+        simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hbody
+      simpa [Expr.lift] using Scoped.lam hdomain hbody'
   | forallE domain body binder ihDomain ihBody =>
     cases h with
     | forallE hd hb =>
       have hcBody : cutoff + 1 ≤ db + 1 := by omega
       have hdomain := ihDomain db fv cutoff hd hc
       have hbody := ihBody (db + 1) fv (cutoff + 1) hb hcBody
-      simpa [Expr.lift, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
-        using Scoped.forallE hdomain hbody
+      have hbody' : Scoped (db + amount + 1) fv (Expr.lift amount (cutoff + 1) body) := by
+        simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hbody
+      simpa [Expr.lift] using Scoped.forallE hdomain hbody'
   | letE type value body ihType ihValue ihBody =>
     cases h with
     | letE ht hv hb =>
@@ -128,8 +130,9 @@ theorem lift_preserves_scope (term : Expr) (db fv amount cutoff : Nat)
       have htype := ihType db fv cutoff ht hc
       have hvalue := ihValue db fv cutoff hv hc
       have hbody := ihBody (db + 1) fv (cutoff + 1) hb hcBody
-      simpa [Expr.lift, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
-        using Scoped.letE htype hvalue hbody
+      have hbody' : Scoped (db + amount + 1) fv (Expr.lift amount (cutoff + 1) body) := by
+        simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hbody
+      simpa [Expr.lift] using Scoped.letE htype hvalue hbody'
   | lit literal =>
     exact Scoped.lit
   | proj name field value ih =>
