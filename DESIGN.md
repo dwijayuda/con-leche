@@ -100463,3 +100463,25 @@ repeat representative large exports on a controlled host with at least
 three samples and report input hashes and medians. Removing telemetry
 is the concrete change; no speedup percentage is asserted before that
 measurement.
+
+### C1 import-audit integration
+
+The census now recognizes the three C1 source modules. The two executables
+each export Lean's global `main`, so the audit imports them into separate
+environments, each with the full common proof/runtime roots. The public
+import planner checks one candidate source graph against both environments;
+name resolution, namespace obligations and baseline-imprecision allowances
+remain specific to each environment. Concatenating the contexts would
+conflate names and could hide a required re-export. Focused source-only
+regressions reproduced that failure with a deliberately merged context.
+
+The only new global shake proposal was the public `ConLeche.MainTheorem`
+edge in `PskernelC1/Soundness.lean`. CI run 38165052920 at `d6b7747` compared
+`--only PskernelC1.Soundness` with `--only ConLeche.NoSuchModule` in both
+executable views. Each comparison proposed replacing that one edge by
+plain `ConLeche.MainTheorem`, public `ConLeche.Accepts` and public
+`ConLeche.Denotes` imports in the same module. Task #223's compensated
+criterion retains the original import, recorded as one measured allowance.
+The independent public-import gate reported none demotable. The temporary
+diagnostic is removed after recording its evidence; the normal gates still
+fail on new or stale allowances and individually demotable public imports.

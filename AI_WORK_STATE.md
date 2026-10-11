@@ -68,6 +68,19 @@ environment. The current audit uses separate executable environments and
 combines dependency ownership without excluding either entry point.
 The readability guides and their packaged source links are included.
 
+The separate-context audit passed at `8d3d593`; its remaining shake proposal
+concerned `PskernelC1/Soundness.lean`'s public `ConLeche.MainTheorem` import.
+[Diagnostic run 38165052920](https://github.com/dwijayuda/con-leche/actions/runs/38165052920)
+at `d6b7747` ran the documented per-module criterion against the noise floor
+in both executable contexts. In each it proposed replacing that one import
+with three: plain `ConLeche.MainTheorem`, public `ConLeche.Accepts` and
+public `ConLeche.Denotes`. The existing compensated-import policy therefore
+retains the original edge, with one measured allowlist row. The independent
+public-import gate reported 1234 of 2878 edges public, none demotable.
+The temporary diagnostic is removed; normal new/stale-allowance and public
+dependency checks remain enabled. All other proof, build and runtime checks
+also passed in the diagnostic run.
+
 Each push validates the exact branch head; consult the checks linked from
 [draft PR #1](https://github.com/dwijayuda/con-leche/pull/1) for the current
 qualification result. A passing earlier revision never qualifies changed
