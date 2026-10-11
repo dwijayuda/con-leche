@@ -54,3 +54,7 @@ The list-based polynomial dominance implementation is a readable correctness bas
 ## Independent expression and scope foundation (in development)
 
 The new independent `Expr` AST preserves ten kernel expression constructors (including locally nameless `fvar`s and typed annotations). Binder propositions are untrusted structured input until the later kernel checker validates their semantic meaning; duplicate or unordered annotation parameters are NOT silently assumed canonical. A separate structural `Scoped` judgment and a runnable scope checker specify variable-depth correctness. Capture-safe raising shifts only variables above the cutoff and increments the cutoff when entering binder bodies, not their types or let values. The scope-preservation theorem belongs to the independent checker foundations, not a proof of inference/conversion or declaration checking. Follow its exact cloud CI result before claiming qualification.
+
+## Capture-safe binder instantiation (in development)
+
+The actual `instantiateAt`/`instantiate1` implementation removes one bound-variable level, raises replacements under intervening binder bodies, lowers indices above the eliminated binder and traverses fvar-type annotations. Its proofs establish the scope-preserving precondition for beta/zeta reduction with arbitrary open replacement terms, including nested lets and dependent binder domains. This is not yet an evaluator or a type-checker acceptance theorem. The proof audit and cloud CI must qualify its exact commit.

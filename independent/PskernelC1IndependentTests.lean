@@ -6,6 +6,8 @@ import PskernelC1Independent.NameCodecTests
 import PskernelC1Independent.SignCasesTests
 import PskernelC1Independent.AllSignsTests
 import PskernelC1Independent.ExprTests
+import PskernelC1Independent.ExprSubstTests
+import PskernelC1Independent.ExprSubstProofs
 import PskernelC1Independent.ExprProofs
 import PskernelC1Independent.UniverseAllSignsProofs
 -- The audit root names each theorem directly; ordinary test imports do not re-export them.
@@ -94,3 +96,8 @@ example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
 #print axioms PskernelC1Independent.Expr.checkScoped_iff
 #print axioms PskernelC1Independent.Expr.Scoped.lift
 #print axioms PskernelC1Independent.Expr.checkScoped_lift
+
+#print axioms PskernelC1Independent.Expr.lift_zero
+#print axioms PskernelC1Independent.Expr.instantiate1_bvar0
+#print axioms PskernelC1Independent.Expr.instantiateAt_preserves_scope
+#print axioms PskernelC1Independent.Expr.instantiate1_preserves_scope
