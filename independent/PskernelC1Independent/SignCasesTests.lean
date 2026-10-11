@@ -40,7 +40,3 @@ example (positive : Nat → Bool) (left right : PskernelC1Independent.Level) :
         eval (signedAssignment positive residual) right :=
   compareSigned_correct positive left right
 
-#print axioms PskernelC1Independent.Level.zeroAtSigns_spec
-#print axioms PskernelC1Independent.Level.compileSigned_eval
-#print axioms PskernelC1Independent.Level.compareSigned_correct
-#print axioms PskernelC1Independent.Level.compareSigned_successor_different

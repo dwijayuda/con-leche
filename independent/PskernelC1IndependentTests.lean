@@ -4,6 +4,8 @@ import PskernelC1Independent.UniversePolynomialProofs
 import PskernelC1Independent.PolynomialTests
 import PskernelC1Independent.NameCodecTests
 import PskernelC1Independent.SignCasesTests
+-- The audit root names each theorem directly; ordinary test imports do not re-export them.
+import PskernelC1Independent.UniverseSignCasesProofs
 -- Non-public imports in the test module are not re-exported into this root.
 import PskernelC1Independent.NameCodecProofs
 -- #guard evaluates these functions during elaboration as well as using their
@@ -71,3 +73,8 @@ example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
 #print axioms PskernelC1Independent.NameCodec.index?_none_iff
 #print axioms PskernelC1Independent.NameCodec.index?_injective
 #print axioms PskernelC1Independent.NameCodec.index?_append_left
+
+#print axioms PskernelC1Independent.Level.zeroAtSigns_spec
+#print axioms PskernelC1Independent.Level.compileSigned_eval
+#print axioms PskernelC1Independent.Level.compareSigned_correct
+#print axioms PskernelC1Independent.Level.compareSigned_successor_different

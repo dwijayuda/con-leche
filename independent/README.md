@@ -41,7 +41,7 @@ lake test
 lake env lean PskernelC1IndependentTests.lean
 ```
 
-Cloud Linux CI builds the proofs and regression examples warning-free, scans all independent source/imports, and audits twenty-two named theorem footprints. The normal repository CI still checks the inherited declaration checker independently. Historical passing evidence does not automatically qualify changed sources.
+Cloud Linux CI builds the proofs and regression examples warning-free, scans all independent source/imports, and audits each named theorem footprint from the direct root capstone census. New modules must import their proof interface explicitly in the root audit: an ordinary import from a test submodule is not re-exported. The normal repository CI still checks the inherited declaration checker independently. Historical passing evidence does not automatically qualify changed sources.
 
 ## Still required
 

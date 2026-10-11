@@ -37,7 +37,7 @@ for _name in ('toPolynomial_sound', 'comparePolynomial_sound', 'comparePolynomia
 for _name in ('comparePolynomial_different', 'comparePolynomial_complete'):
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
 for _name in SIGN_CAPSTONES:
-    EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)  # Initial exact hypotheses; CI verifies.
+    EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)  # Exact results observed in run 38179075499.
 if set(EXPECTED_AXIOMS) != CAPSTONES:
     raise ValueError('every active capstone must have an exact dependency pin')
 
