@@ -732,9 +732,17 @@ FALLBACK = {
 # `whitepaper/` (task #324) is its own lake library — the paper's Lean
 # fragment, which imports nothing from `ConLeche.*` — outside the census
 # roots of `tests/shake.sh` and outside this plan.
+# `independent/` is a separate Lake package: its modules are named
+# PskernelC1Independent.*, NOT independent.PskernelC1Independent.*.
+# Its own import/trust fence covers every source file, and the dedicated
+# C1 independent foundation workflow builds and audits its proof targets.
+# Keep the root census complete for its actual module environment.
+if os.path.isdir('independent'):
+    assert os.path.isfile('independent/lakefile.toml'), 'independent package manifest missing'
+    subprocess.run([sys.executable, 'scripts/c1-independent-audit.py'], check=True)
 files=[f for f in subprocess.check_output(['git','ls-files','*.lean']).decode().split()
        if not f.startswith(('tests/e2e/src/','tests/trust-surface/','bridge/','scripts/',
-                            'whitepaper/'))]
+                            'whitepaper/','independent/'))]
 mod=lambda f: f[:-5].replace('/','.')
 fileof={mod(f):f for f in files}
 UMBRELLA={'ConLeche.lean','ConLeche/Term.lean','ConLeche/SetModel.lean','ConLeche/Semantics.lean',
