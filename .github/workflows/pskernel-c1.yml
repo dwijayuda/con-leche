@@ -1,0 +1,118 @@
+# CI's push/PR job already runs C1's proof-first, verdict and resource gates.
+# This optional workflow repeats the targeted C1 checks and measurement with
+# configurable worker count/repetitions, without duplicating cold builds on
+# every push. It uses the repository's exact lean-toolchain pin.
+name: C1 targeted validation and resource smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      repetitions:
+        description: Measured repetitions per fixture and configuration
+        required: true
+        default: '5'
+        type: choice
+        options: ['2', '3', '5']
+      jobs:
+        description: Workers used by all three benchmark configurations
+        required: true
+        default: '1'
+        type: choice
+        options: ['1', '2', '4']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: c1-targeted-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  c1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install elan from the repository toolchain pin
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Report versions
+        run: |
+          lean --version
+          lake --version
+
+      - name: Restore .lake
+        id: lake-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .lake
+          key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: |
+            lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json') }}-
+            lake-${{ runner.os }}-
+
+      - name: C1 source and trust boundaries
+        run: |
+          set -euo pipefail
+          python3 tests/c1/source_gate.py
+          bash tests/trust-surface.sh
+
+      - name: C1 model and consistency proofs first (warning-free)
+        run: |
+          set -euo pipefail
+          timeout 10800 lake build PskernelC1Proof PskernelC1Tests 2>&1 | tee c1-proof.log
+          if grep -n 'warning:' c1-proof.log; then exit 1; fi
+
+      - name: Build matched executables (warning-free)
+        run: |
+          set -euo pipefail
+          timeout 3600 lake build con-leche pskernel-c1 2>&1 | tee c1-build.log
+          if grep -n 'warning:' c1-build.log; then exit 1; fi
+
+      - name: C1 CLI and statistics gates
+        run: |
+          set -euo pipefail
+          bash tests/c1/verdicts.sh 2>&1 | tee c1-verdicts.log
+          bash tests/pskernel-c1-stats.sh 2>&1 | tee c1-stats.log
+
+      - name: Matched resource smoke
+        env:
+          C1_REPETITIONS: ${{ inputs.repetitions }}
+          C1_WORKERS: ${{ inputs.jobs }}
+        run: |
+          set -euo pipefail
+          python3 tests/c1/perf_smoke.py --repetitions "$C1_REPETITIONS" --jobs "$C1_WORKERS" 2>&1 | tee c1-perf.log
+          cat _tmp/c1/perf/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Package Linux executable
+        run: |
+          tar -czf _tmp/c1/pskernel-c1-linux-x86_64.tar.gz -C .lake/build/bin pskernel-c1
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pskernel-c1-targeted-${{ github.sha }}-j${{ inputs.jobs }}
+          path: |
+            c1-*.log
+            _tmp/c1/pskernel-c1-linux-x86_64.tar.gz
+            _tmp/c1/source-closure.json
+            _tmp/c1/verdicts
+            _tmp/c1/perf/report.json
+            _tmp/c1/perf/summary.md
+            _tmp/c1/perf/logs
+            lean-toolchain
+            PSKERNEL_C1.md
+          if-no-files-found: ignore
+
+      - name: Save .lake, including partial successful builds
+        if: always() && steps.lake-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .lake
+          key: ${{ steps.lake-cache.outputs.cache-primary-key }}

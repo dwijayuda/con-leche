@@ -55,8 +55,8 @@ counting once, on the first spawn (an object already marked is not
 walked again); every reference-count operation on those objects is
 atomic from then on, which is the pool's instruction overhead over
 the sequential loop.  A plain run pays, on top of that, one atomic
-claim per record and two clock reads (the statistics, `WStats`, kept
-in the worker's own loop and merged at the end); the heartbeat lane (`--progress`) pays one lock of a
+claim per record and, when `collectStats`, two clock reads (the statistics,
+`WStats`, kept in the worker's own loop and merged at the end); the heartbeat lane (`--progress`) pays one lock of a
 mutex per completed record, for an exact completed-count.  The bump
 and its line are ONE critical section: with the count taken
 atomically but printed after, a worker descheduled between the two let
@@ -118,8 +118,10 @@ live environment with the parse's and the install's freed temporaries
 scattered through it — allocating phase B out of that scatter costs a
 factor of two in wall time at Mathlib scale for the same instructions.
 With `--progress`, one line per `stride` completed checks.  `st` is
-the timing (`WStats`, performance-only), returned beside the result. -/
+the timing (`WStats`, performance-only), returned beside the result;
+with `collectStats := false` it is threaded through unchanged. -/
 def checkLoop (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride t0 : Nat)
+    (collectStats : Bool)
     {ds : List ConLeche.Declaration}
     (e : ConLeche.Cached.InstalledEnv mode ConLeche.natOpPinSets ds) :
     (k : Nat) → (∀ j, j < k → ConLeche.Cached.GroupChecked mode e j) → WStats →
@@ -127,16 +129,17 @@ def checkLoop (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride t0 : Nat)
         (PLift (∀ i, ConLeche.Cached.GroupChecked mode e i)))
   | k, acc, st =>
     if hk : k < e.pend.size then do
-      let ts ← IO.monoNanosNow
+      let ts ← statsNanos collectStats
       match ConLeche.Cached.checkRecord mode e k hk with
       | .ok ⟨h⟩ =>
-        let te ← IO.monoNanosNow
+        let te ← statsNanos collectStats
         checkHeartbeat err stride t0 e none (k + 1) k hk
-        checkLoop mode err stride t0 e (k + 1) (ConLeche.Cached.groupChecked_extend mode acc h)
-          (st.add k ts te)
+        checkLoop mode err stride t0 collectStats e (k + 1)
+          (ConLeche.Cached.groupChecked_extend mode acc h)
+          (if collectStats then st.add k ts te else st)
       | .error e' =>
-        let te ← IO.monoNanosNow
-        return (st.add k ts te, .error e')
+        let te ← statsNanos collectStats
+        return (if collectStats then st.add k ts te else st, .error e')
     else
       return (st, .ok ⟨ConLeche.Cached.groupChecked_all mode
         (fun j hj => acc j (Nat.lt_of_lt_of_le hj (Nat.le_of_not_lt hk)))⟩)
@@ -153,6 +156,7 @@ walk will never ask for it.  The check is timed into the worker's own
 `st`; on the heartbeat lane worker `w` also publishes the record it is
 on (`live`). -/
 def checkOne (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride t0 : Nat)
+    (collectStats : Bool)
     {ds : List ConLeche.Declaration}
     (e : ConLeche.Cached.InstalledEnv mode ConLeche.natOpPinSets ds)
     (limit : IO.Ref Nat) (done : Std.Mutex Nat) (live : Live) (w : Nat)
@@ -160,12 +164,12 @@ def checkOne (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride t0 : Nat)
     (acc : Array (Nat × ConLeche.Cached.RecordResult mode e)) (st : WStats) :
     IO (Array (Nat × ConLeche.Cached.RecordResult mode e) × WStats) := do
   if k < (← limit.get) then
-    let ts ← IO.monoNanosNow
+    let ts ← statsNanos (collectStats || stride > 0)
     if stride > 0 then live.begin w k ts
     let r := ConLeche.Cached.checkRecordResult mode e k hk
     let bad := r matches .error _
     -- (read in a branch on `bad`, so the check is forced before the clock)
-    let te ← if bad then IO.monoNanosNow else IO.monoNanosNow
+    let te ← if bad then statsNanos collectStats else statsNanos collectStats
     if bad then
       limit.modify (min · k)
     let acc := acc.push (k, r)
@@ -174,7 +178,7 @@ def checkOne (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride t0 : Nat)
       done.atomically do
         let n ← modifyGet fun d => (d + 1, d + 1)
         checkHeartbeat err stride t0 e (some live) n k hk
-    return (acc, st.add k ts te)
+    return (acc, if collectStats then st.add k ts te else st)
   else return (acc, st)
 
 /-- One worker: claim ONE record off the shared counter, check it,
@@ -182,6 +186,7 @@ repeat until the counter is past the records.  The fuel is exact:
 every claim advances the counter by exactly one, so `pend.size + 1`
 claims see it past the end whatever the other workers do. -/
 def checkWorker (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride t0 : Nat)
+    (collectStats : Bool)
     {ds : List ConLeche.Declaration}
     (e : ConLeche.Cached.InstalledEnv mode ConLeche.natOpPinSets ds)
     (next limit : IO.Ref Nat) (done : Std.Mutex Nat) (live : Live) (w : Nat) :
@@ -191,8 +196,8 @@ def checkWorker (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride t0 : Na
   | fuel + 1, acc, st => do
     let k ← next.modifyGet fun a => (a, a + 1)
     if hk : k < e.pend.size then
-      let (acc, st) ← checkOne mode err stride t0 e limit done live w k hk acc st
-      checkWorker mode err stride t0 e next limit done live w fuel acc st
+      let (acc, st) ← checkOne mode err stride t0 collectStats e limit done live w k hk acc st
+      checkWorker mode err stride t0 collectStats e next limit done live w fuel acc st
     else pure (acc, st)
 
 /-- The workers' arrays merged by record index into one table. -/
@@ -212,7 +217,8 @@ internal error, exit 3, never a verdict on the input.  Beside the
 result, the pool's timing report (`PoolRep`, performance-only). -/
 def checkPool (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride t0 jobs : Nat)
     {ds : List ConLeche.Declaration}
-    (e : ConLeche.Cached.InstalledEnv mode ConLeche.natOpPinSets ds) :
+    (e : ConLeche.Cached.InstalledEnv mode ConLeche.natOpPinSets ds)
+    (collectStats : Bool := true) :
     IO (PoolRep × Except (ConLeche.CheckError × Nat)
       (PLift (∀ i, ConLeche.Cached.GroupChecked mode e i))) := do
   let m := e.pend.size
@@ -221,12 +227,12 @@ def checkPool (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride t0 jobs :
   let limit ← IO.mkRef m
   let done ← Std.Mutex.new 0
   let live ← Live.new (if stride > 0 then workers else 0)
-  let tStart ← IO.monoNanosNow
+  let tStart ← statsNanos collectStats
   let mut tasks : Array (Task (Except IO.Error
       (Array (Nat × ConLeche.Cached.RecordResult mode e) × WStats))) := #[]
   for w in [0:workers] do
     tasks := tasks.push (← IO.asTask (prio := .dedicated)
-      (checkWorker mode err stride t0 e next limit done live w (m + 1) #[] {}))
+      (checkWorker mode err stride t0 collectStats e next limit done live w (m + 1) #[] {}))
   let mut results : List (Array (Nat × ConLeche.Cached.RecordResult mode e)) := []
   let mut stats : Array WStats := #[]
   let mut failure : Option IO.Error := none
@@ -234,9 +240,9 @@ def checkPool (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride t0 jobs :
     match ← IO.wait t with
     | .ok (rs, st) =>
       results := rs :: results
-      stats := stats.push st
+      if collectStats then stats := stats.push st
     | .error ioe => failure := some ioe
-  let tEnd ← IO.monoNanosNow
+  let tEnd ← statsNanos collectStats
   let rep : PoolRep := { name := "check pool", workers, tStart, tEnd, stats }
   if let some ioe := failure then
     return (rep, .error (.internal s!"check phase: a worker failed: {ioe}", 0))

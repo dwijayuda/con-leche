@@ -5,7 +5,7 @@ public import Init.System.IO
 /-!
 # Run statistics on stderr (task #329)
 
-The end-of-run summary every run prints on stderr — the slowest
+The end-of-run summary the con-leche CLI prints on stderr — the slowest
 installs and checks, each pool's utilisation and its tail, the peak
 resident set — and the `--progress` heartbeat's in-flight report (how
 many workers are busy, and the oldest record one of them is on).
@@ -14,6 +14,10 @@ many workers are busy, and the oldest record one of them is on).
 decides a verdict: the statistics are accumulated beside the loops
 that carry the proofs, and printed after the verdict is known.  They
 change neither stdout nor the exit code.
+
+The shared driver also supports `collectStats := false`: no per-record
+timing samples or `WStats` updates, and no final summary or peak-RSS read.
+The progress heartbeat, when requested, still measures in-flight records.
 
 **Cost.**  Per record two monotonic clock reads (`IO.monoNanosNow`,
 a vDSO `clock_gettime`) and one update of the worker's OWN `WStats`,
@@ -29,6 +33,11 @@ worker, written by that worker only, read by whoever prints a line).
 @[expose] public section
 
 namespace ConLeche.Driver
+
+/-- Read a performance-only clock only when its sample will be used.
+The disabled branch is a constant, with no clock IO. -/
+@[inline] def statsNanos (enabled : Bool) : IO Nat :=
+  if enabled then IO.monoNanosNow else pure 0
 
 /-- How many of the slowest records each pool remembers. -/
 def statsTopN : Nat := 5

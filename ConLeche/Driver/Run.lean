@@ -98,14 +98,17 @@ the phase boundary, one when the check phase ends, and a summary with
 the three phase durations (`tParse` is when the parse finished) and
 the worker count.
 
-**The statistics** (`printStats`, always, flag or not): after the
+**The statistics** (`printStats`, enabled by default): after the
 phases that ran, a few `con-leche: stats:` lines on stderr — the phase
 times, each pool's utilisation and tail, the slowest installs and
 checks, the peak resident set.  Performance-only: printed after the
 verdict is known, from timings the loops accumulate beside their
-proofs; stdout and the exit code do not see them. -/
+proofs; stdout and the exit code do not see them.  Callers may set
+`collectStats := false` to skip per-record timing, statistics updates
+and the final report.  This does not change the acceptance evidence. -/
 def checkDeclsIO (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride total t0 tParse jobs : Nat)
-    (noMark : Bool) (drain : IO.Ref (IO Unit)) (ds : Array ConLeche.Declaration) :
+    (noMark : Bool) (drain : IO.Ref (IO Unit)) (ds : Array ConLeche.Declaration)
+    (collectStats : Bool := true) :
     IO (Except (ConLeche.CheckError × Nat)
       { env : ConLeche.Env // ConLeche.Cached.checkDecls mode ConLeche.natOpPinSets ds = .ok env }) := do
   let heartbeat (line : String) : IO Unit := do
@@ -116,11 +119,12 @@ def checkDeclsIO (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride total 
   let instLabel (k : Nat) : String := match ds[k]? with
     | some d => s!"{ConLeche.Cached.declCLabel d} (#{k})"
     | none => s!"record {k}"
+  let timed := collectStats || stride > 0
   let serialStats ← IO.mkRef ({} : WStats)
   let parRep ← IO.mkRef (pure none : IO (Option PoolRep))
-  let tI0 ← IO.monoNanosNow
+  let tI0 ← statsNanos collectStats
   let installed ← if jobs ≤ 1 then
-      installLoop mode err stride total t0 serialStats ds
+      installLoop mode err stride total t0 serialStats collectStats ds
         (0, ConLeche.mkFEnv ConLeche.Env.empty, #[]) 0
         -- the install environment's index marked linear (task #331): a
         -- copy of it panics instead of silently copying (`main` sets
@@ -131,8 +135,8 @@ def checkDeclsIO (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride total 
         (0, (ConLeche.mkFEnv ConLeche.Env.empty).markLinear, #[])
         (ConLeche.FEnv.markLinear_eq _ ▸ .nil _)
     else
-      parInstall mode err stride total t0 jobs noMark parRep drain ds
-  let tI1 ← IO.monoNanosNow
+      parInstall mode err stride total t0 jobs noMark parRep drain ds collectStats
+  let tI1 ← statsNanos collectStats
   -- the install's report: the pool's, or the main thread's loop
   let instRep : IO PoolRep := do
     match ← (← parRep.get) with
@@ -143,20 +147,23 @@ def checkDeclsIO (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride total 
              stats := #[st] }
   match installed with
   | .error e =>
-    let now ← IO.monoMsNow
-    heartbeat s!"install failed at {e.2}/{total} t={secs (now - t0)}s \
-      (install {secs (now - tParse)}s)"
-    heartbeat s!"done: parse {secs (tParse - t0)}s, install {secs (now - tParse)}s, \
-      check not reached t={secs (now - t0)}s"
-    printStats err (tParse - t0) (now - tParse) none (← instRep) instLabel none (fun _ => "")
+    let now ← if timed then IO.monoMsNow else pure 0
+    if stride > 0 then
+      heartbeat s!"install failed at {e.2}/{total} t={secs (now - t0)}s \
+        (install {secs (now - tParse)}s)"
+      heartbeat s!"done: parse {secs (tParse - t0)}s, install {secs (now - tParse)}s, \
+        check not reached t={secs (now - t0)}s"
+    if collectStats then
+      printStats err (tParse - t0) (now - tParse) none (← instRep) instLabel none (fun _ => "")
     return .error e
   | .ok ⟨(n, fe, pend), ⟨r⟩⟩ =>
     let e : ConLeche.Cached.InstalledEnv mode ConLeche.natOpPinSets ds.toList :=
       ⟨fe, pend, ⟨n, r⟩⟩
-    let tCheck ← IO.monoMsNow
-    heartbeat s!"install done: {total}/{total} declarations installed, \
-      {pend.size} checks pending t={secs (tCheck - t0)}s \
-      (install {secs (tCheck - tParse)}s)"
+    let tCheck ← if timed then IO.monoMsNow else pure 0
+    if stride > 0 then
+      heartbeat s!"install done: {total}/{total} declarations installed, \
+        {pend.size} checks pending t={secs (tCheck - t0)}s \
+        (install {secs (tCheck - tParse)}s)"
     -- **THE PERSISTENT MARK AT THE PHASE BOUNDARY.**  The installed
     -- environment is complete and READ-ONLY from here on: every
     -- recorded check reads a prefix view of it from a fresh memo state
@@ -190,44 +197,51 @@ def checkDeclsIO (mode : ConLeche.CheckMode) (err : IO.FS.Stream) (stride total 
     if !noMark then
       let _ ← unsafe Runtime.markPersistent fe
       let _ ← unsafe Runtime.markPersistent pend
-    let tMark ← IO.monoMsNow
-    heartbeat s!"persistent mark {secs (tMark - tCheck)}s"
+    if stride > 0 then
+      let tMark ← IO.monoMsNow
+      heartbeat s!"persistent mark {secs (tMark - tCheck)}s"
     let workers := max 1 (min jobs pend.size)
-    let tC0 ← IO.monoNanosNow
+    let tC0 ← statsNanos collectStats
     let (chkRep, res) ← if jobs ≤ 1 then
         -- ONE worker, and no pool: no shared claim counter, no result
         -- table, the same `checkLoop` accumulator — only the thread is
         -- new.  A worker that fails as an `IO` action (not a check
         -- failing) is an internal error, exit 3, never a verdict.
         let (st, r) ← match ← IO.wait (← IO.asTask (prio := .dedicated)
-            (checkLoop mode err stride t0 e 0 (fun j hj => absurd hj (Nat.not_lt_zero j)) {})) with
+            (checkLoop mode err stride t0 collectStats e 0
+              (fun j hj => absurd hj (Nat.not_lt_zero j)) {})) with
           | .ok r => pure r
           | .error ioe =>
             pure ({}, .error (.internal s!"check phase: the worker failed: {ioe}", 0))
-        let tC1 ← IO.monoNanosNow
+        let tC1 ← statsNanos collectStats
         let rep : PoolRep := { name := "check (one worker)", workers := 1, tStart := tC0,
-                               tEnd := tC1, stats := #[st] }
+                               tEnd := tC1, stats := if collectStats then #[st] else #[] }
         pure (rep, r)
       else
-        checkPool mode err stride t0 jobs e
-    let now ← IO.monoMsNow
-    let stats : IO Unit :=
-      printStats err (tParse - t0) (tCheck - tParse) (some (now - tCheck)) (← instRep)
-        instLabel (some chkRep) (checkLabel e)
-    let summary := s!"done: parse {secs (tParse - t0)}s, install {secs (tCheck - tParse)}s, \
-      check {secs (now - tCheck)}s, {workers} worker{if workers = 1 then "" else "s"} \
-      t={secs (now - t0)}s"
+        checkPool mode err stride t0 jobs e collectStats
+    let now ← if timed then IO.monoMsNow else pure 0
+    let stats : IO Unit := do
+      if collectStats then
+        printStats err (tParse - t0) (tCheck - tParse) (some (now - tCheck)) (← instRep)
+          instLabel (some chkRep) (checkLabel e)
+    let summary := if stride > 0 then
+      s!"done: parse {secs (tParse - t0)}s, install {secs (tCheck - tParse)}s, \
+        check {secs (now - tCheck)}s, {workers} worker{if workers = 1 then "" else "s"} \
+        t={secs (now - t0)}s"
+      else ""
     match res with
     | .error e' =>
-      heartbeat s!"check failed at fold position {e'.2} t={secs (now - t0)}s \
-        (check {secs (now - tCheck)}s)"
-      heartbeat summary
+      if stride > 0 then
+        heartbeat s!"check failed at fold position {e'.2} t={secs (now - t0)}s \
+          (check {secs (now - tCheck)}s)"
+        heartbeat summary
       stats
       return .error e'
     | .ok ⟨hall⟩ =>
-      heartbeat s!"check done: {pend.size}/{pend.size} t={secs (now - t0)}s \
-        (check {secs (now - tCheck)}s)"
-      heartbeat summary
+      if stride > 0 then
+        heartbeat s!"check done: {pend.size}/{pend.size} t={secs (now - t0)}s \
+          (check {secs (now - tCheck)}s)"
+        heartbeat summary
       stats
       let fc : ConLeche.Cached.FullyChecked mode ConLeche.natOpPinSets ds.toList :=
         ⟨e, hall⟩

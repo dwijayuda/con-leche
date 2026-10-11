@@ -1,6 +1,6 @@
 name = "con-leche"
 defaultTargets = ["ConLecheBase", "ConLecheModel", "ConLecheCaps", "ConLecheComplete",
-                  "con-leche", "PskernelC1Proof"]
+                  "con-leche", "PskernelC1Proof", "pskernel-c1"]
 testDriver = "ConLecheTests"
 
 # C1 first establishes the concrete acceptance contract and its inherited
@@ -19,6 +19,10 @@ roots = ["PskernelC1.Soundness"]
 name = "PskernelC1Tests"
 srcDir = "tests"
 roots = ["PskernelC1Tests.Axioms"]
+
+[[lean_exe]]
+name = "pskernel-c1"
+root = "PskernelC1.Main"
 
 # NO DEPENDENCIES (task #207).  The package requires nothing: the
 # `lean_inductive_models` preprocessor — its `require`, the
