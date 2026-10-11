@@ -1,6 +1,7 @@
 module
 
 import PskernelC1Independent.UniverseProofs
+import PskernelC1Independent.PolynomialTests
 -- #guard evaluates these functions during elaboration as well as using their
 -- logical definitions; the module system requires an explicit meta import.
 public meta import PskernelC1Independent.Universe
@@ -38,12 +39,10 @@ open PskernelC1Independent.Level
 #guard compareFast (.max (.param 0) (.param 1)) (.max (.param 1) (.param 0)) = .unknown
 #guard compareFast (.imax (.param 0) (.param 1)) (.max (.param 0) (.param 1)) = .unknown
 
--- Checked examples exercise the public theorem interface, not only reduction.
 example (l : Level) : Equivalent l (normalize l) := normalize_sound l
 example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
   compareFast_sound a b h
 
--- The cloud audit checks exactly these eleven results and their assumptions.
 #print axioms eval_substitute
 #print axioms substitute_identity
 #print axioms substitute_compose
@@ -55,3 +54,8 @@ example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
 #print axioms compareFast_sound
 #print axioms compareFast_reflexive
 #print axioms unknown_can_be_equivalent
+#print axioms toPolynomial_sound
+#print axioms comparePolynomial_sound
+#print axioms comparePolynomial_different
+#print axioms comparePolynomial_complete
+#print axioms comparePolynomial_decides

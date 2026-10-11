@@ -8,17 +8,24 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPSTONES = {
+BASE_CAPSTONES = {
     'eval_substitute', 'substitute_identity', 'substitute_compose', 'eval_rename',
     'eval_maxSmart', 'eval_imaxSmart', 'eval_normalize', 'normalize_sound',
     'compareFast_sound', 'compareFast_reflexive', 'unknown_can_be_equivalent',
 }
+POLYNOMIAL_CAPSTONES = {'toPolynomial_sound', 'comparePolynomial_sound',
+                       'comparePolynomial_different', 'comparePolynomial_complete',
+                       'comparePolynomial_decides'}
+CAPSTONES = BASE_CAPSTONES | POLYNOMIAL_CAPSTONES
 PREFIX = 'PskernelC1Independent.Level.'
 ALLOWED_AXIOMS = {'propext', 'Classical.choice', 'Quot.sound'}
-EXPECTED_AXIOMS = {name: ['propext'] for name in CAPSTONES}
+EXPECTED_AXIOMS = {name: ['propext'] for name in BASE_CAPSTONES}
 EXPECTED_AXIOMS['eval_maxSmart'] = sorted(['propext', 'Quot.sound'])
 for _name in ('eval_imaxSmart', 'eval_normalize', 'normalize_sound', 'compareFast_sound'):
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
+# New polynomial footprints are reported and constrained to the same allowed
+# foundations on their first compiler check. Pin exact observed subsets after
+# inspecting that run; no new semantic axiom or proof placeholder is permitted.
 
 
 def code_only(text: str) -> str:
@@ -79,7 +86,7 @@ def audit_source() -> list[dict]:
                     i == 'PskernelC1Independent' or i.startswith('PskernelC1Independent.'))
                for i in imports):
             raise ValueError(f'unapproved dependency in {path.relative_to(ROOT)}: {imports}')
-        if path.name == 'Universe.lean' and any('Proof' in i for i in imports):
+        if path.name in ('Universe.lean', 'UniversePolynomial.lean') and any('Proof' in i for i in imports):
             raise ValueError('executable universe operations import proofs')
         report.append({'path': str(path.relative_to(ROOT)), 'imports': imports,
                        'sha256': hashlib.sha256(text.encode()).hexdigest()})
@@ -114,7 +121,7 @@ def main() -> None:
     parser.add_argument('--axioms', type=Path)
     parser.add_argument('--output', type=Path, default=ROOT / '_tmp/c1-next/independent-audit.json')
     args = parser.parse_args()
-    report = {'scope': 'independent universe component, not full kernel',
+    report = {'scope': 'independent universe components, not full kernel',
               'sources': audit_source()}
     if args.axioms:
         report['theorem_axioms'] = audit_axioms(args.axioms.read_text())

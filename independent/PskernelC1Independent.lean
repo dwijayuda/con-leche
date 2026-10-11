@@ -1,3 +1,3 @@
 module
 
-public import PskernelC1Independent.UniverseProofs
+public import PskernelC1Independent.UniversePolynomialProofs
