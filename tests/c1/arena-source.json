@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "arena_revision": "b83254de5146ef34147ab82a48edbe1856b0edcc",
+  "metadata_url": "https://arena.lean-lang.org/results.json",
+  "archive_url": "https://arena.lean-lang.org/lean-arena-tests.tar.gz",
+  "metadata_sha256": null,
+  "archive_sha256": null,
+  "capture_note": "Initial capture requires --snapshot-mode capture. The metadata revision is checked, every archive input must match the metadata SHA-256 and outcome, and all captured bytes are retained as CI evidence. Pin the two captured file hashes after inspecting that evidence. The archive is not the full Arena suite."
+}
