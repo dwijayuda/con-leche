@@ -2,6 +2,7 @@ module
 
 public import ConLeche.Kernel.ExprOps
 public import PskernelC1Independent.ExprSubstProofs
+public import PskernelC1Independent.ExprAbstractProofs
 
 public section
 
@@ -169,7 +170,53 @@ theorem instantiate1_checked_reference (names : Nat → ConLeche.Name)
   instantiate1_reference_closed names replacement body fv
     (Expr.checkScoped_sound replacement 0 fv closed)
 
--- The artifact audits exactly these four proof obligations.
+/-- Closing a fresh opened fvar is identical to the inherited
+reference kernel abstraction, at every binder depth. The independent
+algorithm has no ConLeche executable dependency. -/
+theorem abstractAt_reference (names : Nat → ConLeche.Name)
+    (target : Nat) (term : Expr) :
+    ∀ cursor : Nat,
+      exprToReference names (Expr.abstractAt target cursor term) =
+        ConLeche.Expr.abstract1 (exprToReference names term) target cursor := by
+  induction term with
+  | bvar index => intro cursor; rfl
+  | fvar index type ih =>
+    intro cursor
+    by_cases h : index = target <;>
+      simp [Expr.abstractAt, ConLeche.Expr.abstract1, exprToReference, h]
+  | sort level => intro cursor; rfl
+  | const name levels => intro cursor; rfl
+  | app function argument ihf iha =>
+    intro cursor
+    simp [Expr.abstractAt, ConLeche.Expr.abstract1, exprToReference,
+      ihf cursor, iha cursor]
+  | lam domain body binder ihd ihb =>
+    intro cursor
+    simp [Expr.abstractAt, ConLeche.Expr.abstract1, exprToReference,
+      ihd cursor, ihb (cursor + 1)]
+  | forallE domain body binder ihd ihb =>
+    intro cursor
+    simp [Expr.abstractAt, ConLeche.Expr.abstract1, exprToReference,
+      ihd cursor, ihb (cursor + 1)]
+  | letE type value body iht ihv ihb =>
+    intro cursor
+    simp [Expr.abstractAt, ConLeche.Expr.abstract1, exprToReference,
+      iht cursor, ihv cursor, ihb (cursor + 1)]
+  | lit literal => intro cursor; rfl
+  | proj name field value ih =>
+    intro cursor
+    simp [Expr.abstractAt, ConLeche.Expr.abstract1, exprToReference, ih cursor]
+
+theorem abstract1_reference (names : Nat → ConLeche.Name)
+    (target : Nat) (term : Expr) :
+    exprToReference names (Expr.abstract1 term target) =
+      ConLeche.Expr.abstract1 (exprToReference names term) target := by
+  exact abstractAt_reference names target term 0
+
+#print axioms abstractAt_reference
+#print axioms abstract1_reference
+
+-- Proof-only cross-implementation audit.
 #print axioms scoped_reference_bvars
 #print axioms instantiateAt_reference_closed
 #print axioms instantiate1_reference_closed

@@ -17,11 +17,13 @@ text = helper.code_only(SOURCE.read_text())
 if re.search(r'\b(sorry|admit|axiom|unsafe|implemented_by|native_decide|extern)\b', text):
     raise ValueError('untrusted proof construct in expression bridge')
 imports = set(re.findall(r'^\s*(?:(?:public|meta)\s+)*import\s+([\w.]+)', text, re.M))
-if imports != {'ConLeche.Kernel.ExprOps', 'PskernelC1Independent.ExprSubstProofs'}:
+if imports != {'ConLeche.Kernel.ExprOps', 'PskernelC1Independent.ExprSubstProofs',
+               'PskernelC1Independent.ExprAbstractProofs'}:
     raise ValueError(f'unexpected proof bridge imports: {imports}')
 
 EXPECTED = {'scoped_reference_bvars', 'instantiateAt_reference_closed',
-            'instantiate1_reference_closed', 'instantiate1_checked_reference'}
+            'instantiate1_reference_closed', 'instantiate1_checked_reference',
+            'abstractAt_reference', 'abstract1_reference'}
 ALLOWED = helper.ALLOWED_AXIOMS
 log = Path(sys.argv[1]).read_text()
 seen = {}

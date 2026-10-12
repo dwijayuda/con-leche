@@ -7,6 +7,8 @@ import PskernelC1Independent.SignCasesTests
 import PskernelC1Independent.AllSignsTests
 import PskernelC1Independent.ExprTests
 import PskernelC1Independent.ExprSubstTests
+import PskernelC1Independent.ExprAbstractTests
+import PskernelC1Independent.ExprAbstractProofs
 import PskernelC1Independent.ExprSubstProofs
 import PskernelC1Independent.ExprProofs
 import PskernelC1Independent.UniverseAllSignsProofs
@@ -104,3 +106,7 @@ example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
 
 #print axioms PskernelC1Independent.Expr.lift_above_scope
 #print axioms PskernelC1Independent.Expr.lift_closed
+
+#print axioms PskernelC1Independent.Expr.abstractAt_preserves_scope
+#print axioms PskernelC1Independent.Expr.abstract1_preserves_scope
+#print axioms PskernelC1Independent.Expr.checkScoped_abstract1

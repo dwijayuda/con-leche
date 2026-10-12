@@ -47,7 +47,8 @@ for _name in ('compareExhaustive_correct', 'compareExhaustive_different'):
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
 EXPR_CAPSTONES = {'checkScoped_sound', 'checkScoped_complete', 'checkScoped_iff', 'Scoped.lift', 'checkScoped_lift',
                    'lift_zero', 'instantiate1_bvar0', 'instantiateAt_preserves_scope',
-                   'instantiate1_preserves_scope', 'lift_above_scope', 'lift_closed'}
+                   'instantiate1_preserves_scope', 'lift_above_scope', 'lift_closed', 'abstractAt_preserves_scope',
+                   'abstract1_preserves_scope', 'checkScoped_abstract1'}
 EXPR_PREFIX = 'PskernelC1Independent.Expr.'
 # New expression proof assumptions are audited by exact output after first CI compilation.
 if set(EXPECTED_AXIOMS) != CAPSTONES:
@@ -112,7 +113,7 @@ def audit_source() -> list[dict]:
                     i == 'PskernelC1Independent' or i.startswith('PskernelC1Independent.'))
                for i in imports):
             raise ValueError(f'unapproved dependency in {path.relative_to(ROOT)}: {imports}')
-        if path.name in ('Universe.lean', 'UniversePolynomial.lean', 'Expr.lean', 'ExprSubst.lean') and any('Proof' in i for i in imports):
+        if path.name in ('Universe.lean', 'UniversePolynomial.lean', 'Expr.lean', 'ExprSubst.lean', 'ExprAbstract.lean') and any('Proof' in i for i in imports):
             raise ValueError('executable universe operations import proofs')
         report.append({'path': str(path.relative_to(ROOT)), 'imports': imports,
                        'sha256': hashlib.sha256(text.encode()).hexdigest()})
