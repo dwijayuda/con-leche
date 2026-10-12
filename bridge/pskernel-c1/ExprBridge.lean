@@ -1,8 +1,10 @@
 module
 
 public import ConLeche.Kernel.ExprOps
+public import ConLeche.Rules.Rel
 public import PskernelC1Independent.ExprSubstProofs
 public import PskernelC1Independent.ExprAbstractProofs
+public import PskernelC1Independent.InferHeadProofs
 
 public section
 
@@ -255,6 +257,30 @@ theorem abstract1_reference (names : Nat → ConLeche.Name)
 
 #print axioms abstractAt_reference
 #print axioms abstract1_reference
+
+/-- The independently implemented head-inference success is an actual
+ConLeche declarative *rule derivation*, at either inference grade.
+This is a proof-only bridge to the shared sound rule layer, not a
+production delegation to ConLeche's executable checker.
+
+The result is restricted to sort and locally-scoped fvar leaves.
+A full soundness theorem still needs environment and context model
+invariants, all other expression cases and declaration installation.
+-/
+theorem inferHead_reference_rule (names : Nat → ConLeche.Name)
+    (env : ConLeche.Env) (depth : Nat) (grade : ConLeche.Rules.Grade)
+    (term type : Expr)
+    (accepted : Expr.inferHead depth term = .inferred type) :
+    ConLeche.Rules.Infer env grade depth
+      (exprToReference names term) (exprToReference names type) := by
+  have hderiv := Expr.inferHead_sound depth term type accepted
+  cases hderiv with
+  | sort level =>
+    exact ConLeche.Rules.Infer.sort
+  | fvar hindex htype =>
+    exact ConLeche.Rules.Infer.fvar hindex
+
+#print axioms inferHead_reference_rule
 
 -- Proof-only cross-implementation audit.
 #print axioms name_roundtrip

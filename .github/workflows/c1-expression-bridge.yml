@@ -45,7 +45,7 @@ jobs:
           git rev-parse HEAD | tee _tmp/c1-next/expr-revision.txt
           lean --version | tee _tmp/c1-next/expr-toolchain.txt
           python3 scripts/c1-independent-audit.py
-          lake build ConLeche.Kernel.ExprOps 2>&1 | tee _tmp/c1-next/expr-reference.log
+          lake build ConLeche.Rules.Rel ConLeche.Kernel.ExprOps 2>&1 | tee _tmp/c1-next/expr-reference.log
           (cd independent && lake build) 2>&1 | tee _tmp/c1-next/expr-independent.log
       - name: Prove refinement and audit trust
         run: |

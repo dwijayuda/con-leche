@@ -46,7 +46,8 @@ for _name in ('signed_reconstruct', 'signPatterns_cover'):
 for _name in ('compareExhaustive_correct', 'compareExhaustive_different'):
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
 INFER_CAPSTONES = {'Scoped.weakenFVars', 'inferHead_sound', 'inferHead_complete',
-                    'inferHead_iff', 'inferHead_output_scoped'}
+                    'inferHead_iff', 'inferHead_output_scoped', 'inferHead_invalidScope',
+                    'inferHead_unsupported_scoped'}
 EXPR_CAPSTONES = {'checkScoped_sound', 'checkScoped_complete', 'checkScoped_iff', 'Scoped.lift', 'checkScoped_lift',
                    'lift_zero', 'instantiate1_bvar0', 'instantiateAt_preserves_scope',
                    'instantiate1_preserves_scope', 'lift_above_scope', 'lift_closed', 'abstractAt_preserves_scope',

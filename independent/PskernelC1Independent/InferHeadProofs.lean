@@ -83,6 +83,26 @@ theorem inferHead_iff (fdepth : Nat) (term type : Expr) :
 
 /-- The type returned by this leaf checker is itself properly scoped.
 This is a necessary input to the full inference/model proof. -/
+/-- An invalid-scope result is genuine failed syntactic scope
+validation, not a statement that a well-formed theorem is false. -/
+theorem inferHead_invalidScope (fdepth : Nat) (term : Expr)
+    (h : inferHead fdepth term = .invalidScope) :
+    checkScoped 0 fdepth term = false := by
+  cases hs : checkScoped 0 fdepth term with
+  | false => rfl
+  | true =>
+    cases term <;> simp [inferHead, hs] at h
+
+/-- Unsupported is returned only after valid syntactic scoping was
+established. This prevents conflating unimplemented syntax with a
+malformed variable/context. -/
+theorem inferHead_unsupported_scoped (fdepth : Nat) (term : Expr)
+    (h : inferHead fdepth term = .unsupported) :
+    checkScoped 0 fdepth term = true := by
+  cases hs : checkScoped 0 fdepth term with
+  | true => rfl
+  | false => simp [inferHead, hs] at h
+
 theorem inferHead_output_scoped (fdepth : Nat) (term type : Expr)
     (h : inferHead fdepth term = .inferred type) :
     Scoped 0 fdepth type := by

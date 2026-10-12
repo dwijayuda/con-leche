@@ -118,3 +118,6 @@ example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
 #print axioms PskernelC1Independent.Expr.inferHead_complete
 #print axioms PskernelC1Independent.Expr.inferHead_iff
 #print axioms PskernelC1Independent.Expr.inferHead_output_scoped
+
+#print axioms PskernelC1Independent.Expr.inferHead_invalidScope
+#print axioms PskernelC1Independent.Expr.inferHead_unsupported_scoped
