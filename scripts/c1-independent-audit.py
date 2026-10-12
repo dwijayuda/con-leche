@@ -133,7 +133,7 @@ def audit_axioms(log: str) -> dict[str, list[str]]:
     pattern = r"'([^']+)' (?:depends on axioms: \[([^\]]*)\]|does not depend on any axioms)"
     seen: dict[str, list[str]] = {}
     for name, raw in re.findall(pattern, log):
-        if name.startswith(PREFIX) or name.startswith(CODEC_PREFIX) or name.startswith(EXPR_PREFIX):
+        if name.startswith(PREFIX) or name.startswith(CODEC_PREFIX) or name.startswith(EXPR_PREFIX) or name.startswith('PskernelC1Independent.LocalContext.'):
             axioms = sorted(a.strip() for a in raw.split(',') if a.strip())
             if set(axioms) - ALLOWED_AXIOMS:
                 raise ValueError(f'unapproved theorem dependency: {name}: {axioms}')
