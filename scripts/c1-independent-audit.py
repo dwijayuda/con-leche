@@ -45,6 +45,9 @@ for _name in ('signed_reconstruct', 'signPatterns_cover'):
     EXPECTED_AXIOMS[_name] = sorted(['propext', 'Quot.sound'])
 for _name in ('compareExhaustive_correct', 'compareExhaustive_different'):
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
+CONTEXT_CAPSTONES = {'LocalContext.lookup_bounded', 'LocalContext.lookup_unique',
+                     'Expr.inferHeadIn_sound', 'Expr.inferHeadIn_complete',
+                     'Expr.inferHeadIn_iff', 'Expr.inferHeadIn_unique'}
 INFER_CAPSTONES = {'Scoped.weakenFVars', 'inferHead_sound', 'inferHead_complete',
                     'inferHead_iff', 'inferHead_output_scoped', 'inferHead_invalidScope',
                     'inferHead_unsupported_scoped'}
@@ -116,7 +119,7 @@ def audit_source() -> list[dict]:
                     i == 'PskernelC1Independent' or i.startswith('PskernelC1Independent.'))
                for i in imports):
             raise ValueError(f'unapproved dependency in {path.relative_to(ROOT)}: {imports}')
-        if path.name in ('Universe.lean', 'UniversePolynomial.lean', 'Expr.lean', 'ExprSubst.lean', 'ExprAbstract.lean', 'InferHead.lean') and any('Proof' in i for i in imports):
+        if path.name in ('Universe.lean', 'UniversePolynomial.lean', 'Expr.lean', 'ExprSubst.lean', 'ExprAbstract.lean', 'InferHead.lean', 'InferContext.lean') and any('Proof' in i for i in imports):
             raise ValueError('executable universe operations import proofs')
         report.append({'path': str(path.relative_to(ROOT)), 'imports': imports,
                        'sha256': hashlib.sha256(text.encode()).hexdigest()})
@@ -137,7 +140,7 @@ def audit_axioms(log: str) -> dict[str, list[str]]:
             if name in seen and seen[name] != axioms:
                 raise ValueError(f'inconsistent repeated audit: {name}')
             seen[name] = axioms
-    expected = {PREFIX + name for name in CAPSTONES} | {CODEC_PREFIX + name for name in CODEC_CAPSTONES} | {EXPR_PREFIX + name for name in EXPR_CAPSTONES | INFER_CAPSTONES}
+    expected = {PREFIX + name for name in CAPSTONES} | {CODEC_PREFIX + name for name in CODEC_CAPSTONES} | {EXPR_PREFIX + name for name in EXPR_CAPSTONES | INFER_CAPSTONES} | {'PskernelC1Independent.' + name for name in CONTEXT_CAPSTONES}
     if set(seen) != expected:
         raise ValueError(f'capstone census mismatch; missing={sorted(expected-set(seen))}, extra={sorted(set(seen)-expected)}')
     for short, axioms in EXPECTED_AXIOMS.items():

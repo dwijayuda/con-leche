@@ -8,3 +8,4 @@ public import PskernelC1Independent.ExprProofs
 public import PskernelC1Independent.ExprSubstProofs
 public import PskernelC1Independent.ExprAbstractProofs
 public import PskernelC1Independent.InferHeadProofs
+public import PskernelC1Independent.InferContextProofs

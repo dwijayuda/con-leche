@@ -9,6 +9,8 @@ import PskernelC1Independent.ExprTests
 import PskernelC1Independent.ExprSubstTests
 import PskernelC1Independent.ExprAbstractTests
 import PskernelC1Independent.InferHeadTests
+import PskernelC1Independent.InferContextTests
+import PskernelC1Independent.InferContextProofs
 import PskernelC1Independent.InferHeadProofs
 import PskernelC1Independent.ExprAbstractProofs
 import PskernelC1Independent.ExprSubstProofs
@@ -121,3 +123,10 @@ example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
 
 #print axioms PskernelC1Independent.Expr.inferHead_invalidScope
 #print axioms PskernelC1Independent.Expr.inferHead_unsupported_scoped
+
+#print axioms PskernelC1Independent.LocalContext.lookup_bounded
+#print axioms PskernelC1Independent.LocalContext.lookup_unique
+#print axioms PskernelC1Independent.Expr.inferHeadIn_sound
+#print axioms PskernelC1Independent.Expr.inferHeadIn_complete
+#print axioms PskernelC1Independent.Expr.inferHeadIn_iff
+#print axioms PskernelC1Independent.Expr.inferHeadIn_unique
