@@ -50,7 +50,7 @@ theorem inferHeadIn_sound (context : LocalContext) (term type : Expr)
   have hh : ∃ inferred, inferHead context.length term = .inferred inferred := by
     unfold inferHeadIn at accepted
     cases hc : inferHead context.length term with
-    | inferred inferred => exact ⟨inferred, hc⟩
+    | inferred inferred => exact ⟨inferred, rfl⟩
     | invalidScope => simp [hc] at accepted
     | unsupported => simp [hc] at accepted
   obtain ⟨inferred, hinfer⟩ := hh
@@ -60,8 +60,8 @@ theorem inferHeadIn_sound (context : LocalContext) (term type : Expr)
     simp [inferHeadIn, hinfer] at accepted
     subst type
     exact ContextHeadDerives.sort level
-  | @fvar index annotation hb hscope =>
-    by_cases hlookup : LocalContext.lookup context index = some annotation
+  | fvar hb hscope =>
+    by_cases hlookup : LocalContext.lookup context index = some inferred
     · simp [inferHeadIn, hinfer, hlookup] at accepted
       subst type
       exact ContextHeadDerives.fvar hlookup hscope
@@ -74,8 +74,8 @@ theorem inferHeadIn_complete (context : LocalContext)
     inferHeadIn context term = .inferred type := by
   cases h with
   | sort level => simp [inferHeadIn, inferHead, checkScoped]
-  | @fvar index annotation hlookup hscope =>
-    have hb := LocalContext.lookup_bounded context index annotation hlookup
+  | fvar hlookup hscope =>
+    have hb := LocalContext.lookup_bounded _ _ _ hlookup
     have hsc := checkScoped_complete hscope
     simp [inferHeadIn, inferHead, checkScoped, hb, hsc, hlookup]
 
