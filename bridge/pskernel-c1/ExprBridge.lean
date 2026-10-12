@@ -303,6 +303,22 @@ theorem inferHeadIn_reference_rule (names : Nat → ConLeche.Name)
 
 #print axioms inferHeadIn_reference_rule
 
+/-- The entire local-context-validated entry point also refines
+the declarative inference rules. This proof discharges both the
+registered-annotation check and the all-context syntactic validation;
+semantic well-typedness of the context remains a separate obligation. -/
+theorem inferChecked_reference_rule (names : Nat → ConLeche.Name)
+    (env : ConLeche.Env) (context : LocalContext)
+    (grade : ConLeche.Rules.Grade) (term type : Expr)
+    (accepted : Expr.inferChecked context term = .inferred type) :
+    ConLeche.Rules.Infer env grade context.length
+      (exprToReference names term) (exprToReference names type) := by
+  have h := (Expr.inferChecked_sound context term type accepted).2
+  exact inferHeadIn_reference_rule names env context grade term type
+    (Expr.inferHeadIn_complete context h)
+
+#print axioms inferChecked_reference_rule
+
 -- Proof-only cross-implementation audit.
 #print axioms name_roundtrip
 #print axioms name_translation_injective

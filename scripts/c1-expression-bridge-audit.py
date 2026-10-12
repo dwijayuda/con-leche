@@ -29,7 +29,8 @@ EXPECTED = {'name_roundtrip', 'name_translation_injective',
             'scoped_reference_bvars', 'instantiateAt_reference_closed',
             'instantiate1_reference_closed', 'instantiate1_checked_reference',
             'abstractAt_reference', 'abstract1_reference',
-            'inferHead_reference_rule', 'inferHeadIn_reference_rule'}
+            'inferHead_reference_rule', 'inferHeadIn_reference_rule',
+            'inferChecked_reference_rule'}
 ALLOWED = helper.ALLOWED_AXIOMS
 log = Path(sys.argv[1]).read_text()
 seen = {}
