@@ -5,6 +5,7 @@ public import ConLeche.Rules.Rel
 public import PskernelC1Independent.ExprSubstProofs
 public import PskernelC1Independent.ExprAbstractProofs
 public import PskernelC1Independent.InferHeadProofs
+public import PskernelC1Independent.InferContextProofs
 
 public section
 
@@ -281,6 +282,26 @@ theorem inferHead_reference_rule (names : Nat → ConLeche.Name)
     exact ConLeche.Rules.Infer.fvar hindex
 
 #print axioms inferHead_reference_rule
+
+/-- The stricter independent CONTEXT-CHECKED leaf inference also
+reaches the shared declarative rule layer, after proving the actual
+registered type matches the annotation and is in range. In particular,
+forged free-variable annotations cannot be accepted by this entry
+point even if syntactically in scope.
+
+This does not yet establish the semantic CtxOk invariant, full
+environment model or safe arbitrary-declaration installation.
+-/
+theorem inferHeadIn_reference_rule (names : Nat → ConLeche.Name)
+    (env : ConLeche.Env) (context : LocalContext)
+    (grade : ConLeche.Rules.Grade) (term type : Expr)
+    (accepted : Expr.inferHeadIn context term = .inferred type) :
+    ConLeche.Rules.Infer env grade context.length
+      (exprToReference names term) (exprToReference names type) := by
+  exact inferHead_reference_rule names env context.length grade term type
+    (Expr.inferHeadIn_toHead context term type accepted)
+
+#print axioms inferHeadIn_reference_rule
 
 -- Proof-only cross-implementation audit.
 #print axioms name_roundtrip

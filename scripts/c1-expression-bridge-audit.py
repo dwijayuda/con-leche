@@ -19,6 +19,7 @@ if re.search(r'\b(sorry|admit|axiom|unsafe|implemented_by|native_decide|extern)\
 imports = set(re.findall(r'^\s*(?:(?:public|meta)\s+)*import\s+([\w.]+)', text, re.M))
 if imports != {'ConLeche.Kernel.ExprOps', 'ConLeche.Rules.Rel',
                'PskernelC1Independent.InferHeadProofs',
+               'PskernelC1Independent.InferContextProofs',
                'PskernelC1Independent.ExprSubstProofs',
                'PskernelC1Independent.ExprAbstractProofs'}:
     raise ValueError(f'unexpected proof bridge imports: {imports}')
@@ -28,7 +29,7 @@ EXPECTED = {'name_roundtrip', 'name_translation_injective',
             'scoped_reference_bvars', 'instantiateAt_reference_closed',
             'instantiate1_reference_closed', 'instantiate1_checked_reference',
             'abstractAt_reference', 'abstract1_reference',
-            'inferHead_reference_rule'}
+            'inferHead_reference_rule', 'inferHeadIn_reference_rule'}
 ALLOWED = helper.ALLOWED_AXIOMS
 log = Path(sys.argv[1]).read_text()
 seen = {}

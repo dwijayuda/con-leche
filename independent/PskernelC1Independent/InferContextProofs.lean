@@ -107,6 +107,25 @@ theorem inferHeadIn_iff (context : LocalContext) (term type : Expr) :
       ContextHeadDerives context term type :=
   ⟨inferHeadIn_sound context term type, inferHeadIn_complete context⟩
 
+/-- A context-checked leaf judgment refines the original local
+inference rule, with the missing premise discharged by the actual
+bounded context lookup. This is not the missing global CtxOk/model. -/
+theorem ContextHeadDerives.toHeadDerives (context : LocalContext)
+    {term type : Expr} (h : ContextHeadDerives context term type) :
+    HeadDerives context.length term type := by
+  cases h with
+  | sort level => exact HeadDerives.sort level
+  | fvar hlookup hscope =>
+    exact HeadDerives.fvar (LocalContext.lookup_bounded _ _ _ hlookup) hscope
+
+/-- Successful contextual inference refines the ordinary independent
+head-inference executable judgment, never vice versa without context. -/
+theorem inferHeadIn_toHead (context : LocalContext) (term type : Expr)
+    (h : inferHeadIn context term = .inferred type) :
+    inferHead context.length term = .inferred type := by
+  exact inferHead_complete
+    ((inferHeadIn_sound context term type h).toHeadDerives context)
+
 /-- No two different outputs can be accepted for one input/context. -/
 theorem inferHeadIn_unique (context : LocalContext) (term first second : Expr)
     (a : inferHeadIn context term = .inferred first)

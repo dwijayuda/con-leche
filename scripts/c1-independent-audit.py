@@ -47,7 +47,8 @@ for _name in ('compareExhaustive_correct', 'compareExhaustive_different'):
     EXPECTED_AXIOMS[_name] = sorted(ALLOWED_AXIOMS)
 CONTEXT_CAPSTONES = {'LocalContext.lookup_bounded', 'LocalContext.lookup_unique',
                      'Expr.inferHeadIn_sound', 'Expr.inferHeadIn_complete',
-                     'Expr.inferHeadIn_iff', 'Expr.inferHeadIn_unique'}
+                     'Expr.inferHeadIn_iff', 'Expr.inferHeadIn_unique',
+                     'Expr.ContextHeadDerives.toHeadDerives', 'Expr.inferHeadIn_toHead'}
 INFER_CAPSTONES = {'Scoped.weakenFVars', 'inferHead_sound', 'inferHead_complete',
                     'inferHead_iff', 'inferHead_output_scoped', 'inferHead_invalidScope',
                     'inferHead_unsupported_scoped'}
