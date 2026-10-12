@@ -67,9 +67,10 @@ theorem checkFrom_correct (start : Nat) (context : LocalContext) :
         have ht : lookup rest index = some type := by
           simpa [lookup] using found
         have htail := (ih (start + 1)).mp hparts.2 index type ht
-        simpa [Nat.add_assoc] using htail
+        simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using htail
     · intro h
-      apply Bool.and_eq_true.mpr
+      change (Expr.checkScoped 0 start head && checkFrom (start + 1) rest) = true
+      simp only [Bool.and_eq_true]
       constructor
       · apply Expr.checkScoped_complete
         have hh := h 0 head (by simp [lookup])
@@ -77,7 +78,7 @@ theorem checkFrom_correct (start : Nat) (context : LocalContext) :
       · apply (ih (start + 1)).mpr
         intro index type found
         have hh := h (index + 1) type (by simpa [lookup] using found)
-        simpa [Nat.add_assoc] using hh
+        simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hh
 
 theorem checkContext_correct (context : LocalContext) :
     checkContext context = true ↔ WellScoped context := by
