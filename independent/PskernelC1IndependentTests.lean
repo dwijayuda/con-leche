@@ -133,3 +133,9 @@ example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
 
 #print axioms PskernelC1Independent.Expr.ContextHeadDerives.toHeadDerives
 #print axioms PskernelC1Independent.Expr.inferHeadIn_toHead
+
+#print axioms PskernelC1Independent.LocalContext.checkFrom_correct
+#print axioms PskernelC1Independent.LocalContext.checkContext_correct
+#print axioms PskernelC1Independent.Expr.inferChecked_sound
+#print axioms PskernelC1Independent.Expr.inferChecked_complete
+#print axioms PskernelC1Independent.Expr.inferChecked_iff

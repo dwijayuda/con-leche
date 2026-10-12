@@ -39,6 +39,15 @@ strictly earlier local levels. This is not yet a theorem of typing. -/
 def WellScoped (context : LocalContext) : Prop :=
   ∀ index type, lookup context index = some type → Expr.Scoped 0 index type
 
+/-- Validate every registered type at its actual, monotonically
+assigned fvar level; no untrusted context prefix is ignored. -/
+def checkFrom (start : Nat) : LocalContext → Bool
+  | [] => true
+  | type :: rest =>
+      Expr.checkScoped 0 start type && checkFrom (start + 1) rest
+
+def checkContext (context : LocalContext) : Bool := checkFrom 0 context
+
 end LocalContext
 
 /-- An annotated fvar that disagrees with its registered local binding
@@ -47,6 +56,7 @@ inductive ContextOutcome where
   | inferred (type : Expr)
   | invalidScope
   | contextMismatch
+  | malformedContext
   | unsupported
   deriving Repr, DecidableEq
 
@@ -65,6 +75,13 @@ def inferHeadIn (context : LocalContext) (term : Expr) : ContextOutcome :=
       | _ => .inferred type
   | .invalidScope => .invalidScope
   | .unsupported => .unsupported
+
+/-- An explicit context-validated front door. A syntactically
+well-scoped fvar cannot be inferred in a malformed local context, and
+malformed context is a distinct error from a type-annotation mismatch. -/
+def inferChecked (context : LocalContext) (term : Expr) : ContextOutcome :=
+  if LocalContext.checkContext context then inferHeadIn context term
+  else .malformedContext
 
 /-- A typing judgment whose fvar rule reads its type from the actual
 local context rather than trusting whichever annotation input supplies. -/

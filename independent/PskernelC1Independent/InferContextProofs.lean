@@ -38,6 +38,52 @@ theorem lookup_unique (context : LocalContext) (index : Nat)
     (b : lookup context index = some second) : first = second :=
   Option.some.inj (a.symm.trans b)
 
+/-- The entire executable context check is EQUIVALENT to
+the lookup-indexed syntactic context invariant, including every tail
+entry and its actual fvar level. -/
+theorem checkFrom_correct (start : Nat) (context : LocalContext) :
+    checkFrom start context = true ↔
+      ∀ index type, lookup context index = some type →
+        Expr.Scoped 0 (start + index) type := by
+  induction context generalizing start with
+  | nil =>
+    constructor
+    · intro _ index type h
+      cases index <;> simp [lookup] at h
+    · intro _
+      rfl
+  | cons head rest ih =>
+    constructor
+    · intro h index type found
+      have hparts : Expr.checkScoped 0 start head = true ∧
+          checkFrom (start + 1) rest = true := by
+        simpa [checkFrom, Bool.and_eq_true] using h
+      cases index with
+      | zero =>
+        have heq : type = head := by simpa [lookup] using found.symm
+        subst type
+        simpa using (Expr.checkScoped_sound head 0 start hparts.1)
+      | succ index =>
+        have ht : lookup rest index = some type := by
+          simpa [lookup] using found
+        have htail := (ih (start + 1)).mp hparts.2 index type ht
+        simpa [Nat.add_assoc] using htail
+    · intro h
+      apply Bool.and_eq_true.mpr
+      constructor
+      · apply Expr.checkScoped_complete
+        have hh := h 0 head (by simp [lookup])
+        simpa using hh
+      · apply (ih (start + 1)).mpr
+        intro index type found
+        have hh := h (index + 1) type (by simpa [lookup] using found)
+        simpa [Nat.add_assoc] using hh
+
+theorem checkContext_correct (context : LocalContext) :
+    checkContext context = true ↔ WellScoped context := by
+  simpa [checkContext, WellScoped, Nat.zero_add] using
+    checkFrom_correct 0 context
+
 end LocalContext
 
 namespace Expr
@@ -136,6 +182,36 @@ theorem inferHeadIn_unique (context : LocalContext) (term first second : Expr)
     exact congrArg (fun x => match x with
       | .inferred v => some v
       | _ => none) h)
+
+/-- Global syntactic-context validity and locally contextual
+inference both follow from successful executable checking. A model
+invariant for the stored types is still a separate obligation. -/
+theorem inferChecked_sound (context : LocalContext) (term type : Expr)
+    (accepted : inferChecked context term = .inferred type) :
+    LocalContext.WellScoped context ∧
+      ContextHeadDerives context term type := by
+  by_cases hc : LocalContext.checkContext context = true
+  · have hinfer : inferHeadIn context term = .inferred type := by
+      simpa [inferChecked, hc] using accepted
+    exact ⟨(LocalContext.checkContext_correct context).mp hc,
+      inferHeadIn_sound context term type hinfer⟩
+  · simp [inferChecked, hc] at accepted
+
+theorem inferChecked_complete (context : LocalContext) {term type : Expr}
+    (valid : LocalContext.WellScoped context)
+    (h : ContextHeadDerives context term type) :
+    inferChecked context term = .inferred type := by
+  have hv := (LocalContext.checkContext_correct context).mpr valid
+  simp [inferChecked, hv, inferHeadIn_complete context h]
+
+theorem inferChecked_iff (context : LocalContext) (term type : Expr) :
+    inferChecked context term = .inferred type ↔
+      LocalContext.WellScoped context ∧
+        ContextHeadDerives context term type := by
+  constructor
+  · exact inferChecked_sound context term type
+  · rintro ⟨valid, derived⟩
+    exact inferChecked_complete context valid derived
 
 end Expr
 end PskernelC1Independent

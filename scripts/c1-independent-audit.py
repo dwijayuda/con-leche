@@ -48,7 +48,9 @@ for _name in ('compareExhaustive_correct', 'compareExhaustive_different'):
 CONTEXT_CAPSTONES = {'LocalContext.lookup_bounded', 'LocalContext.lookup_unique',
                      'Expr.inferHeadIn_sound', 'Expr.inferHeadIn_complete',
                      'Expr.inferHeadIn_iff', 'Expr.inferHeadIn_unique',
-                     'Expr.ContextHeadDerives.toHeadDerives', 'Expr.inferHeadIn_toHead'}
+                     'Expr.ContextHeadDerives.toHeadDerives', 'Expr.inferHeadIn_toHead', 'LocalContext.checkFrom_correct',
+                     'LocalContext.checkContext_correct', 'Expr.inferChecked_sound',
+                     'Expr.inferChecked_complete', 'Expr.inferChecked_iff'}
 INFER_CAPSTONES = {'Scoped.weakenFVars', 'inferHead_sound', 'inferHead_complete',
                     'inferHead_iff', 'inferHead_output_scoped', 'inferHead_invalidScope',
                     'inferHead_unsupported_scoped'}
