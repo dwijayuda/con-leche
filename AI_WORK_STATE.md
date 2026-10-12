@@ -1,142 +1,85 @@
-# PSKernel-C1 work state
+# PSKernel-C1 — authoritative AI work state
 
-Updated: 2026-10-12, Asia/Jakarta.
-Repository: `dwijayuda/con-leche`; branch: `pskernel-c1`.
-Separate from `dwijayuda/pskernel` and PSKernel-Fast. PR #1 remains draft and unmerged.
+Updated: 2026-10-12 (Asia/Jakarta)
+Repository: `dwijayuda/con-leche`; active branch: `pskernel-c1`.
+PR: [#1](https://github.com/dwijayuda/con-leche/pull/1), draft and unmerged.
+This project is separate from `dwijayuda/pskernel` and PSKernel-Fast.
 
-## Authoritative priorities
+## Mission and non-negotiable boundaries
 
-Build an independently implemented, Lean-compatible checker with correctness, full capability, performance, explainability/readability and a proof-first connection to model existence and relative consistency.
+Deliver an independently implemented, Lean 4-compatible, high-performance kernel checker with explainable architecture, readable code and a verified connection to semantic model existence and relative consistency. The full input and declaration capabilities of a pinned official Lean version and the complete Lean Kernel Arena are intended acceptance targets. **Correctness and theorems cannot be sacrificed for performance or coverage.**
 
-**Substantial size reduction is optional and must not constrain the other priorities.** No mandatory percentage reduction, binary-size ceiling, or line-count budget. The earlier proposed 50% threshold is explicitly NOT adopted. Never weaken a theorem, drop a capability, obscure code or sacrifice useful performance to reduce size.
+**Substantial size reduction is OPTIONAL; it is NOT an acceptance constraint, percentage target, binary ceiling, or reason to sacrifice capability, proof correctness, performance or readability.**
 
-Execution plan: [PSKERNEL_C1_NEXT_ARCHITECTURE.md](PSKERNEL_C1_NEXT_ARCHITECTURE.md).
-Implementation checkpoint: [IMPLEMENTATION_CHECKPOINT_20261012.md](docs/pskernel-c1/IMPLEMENTATION_CHECKPOINT_20261012.md).
-Shipped interface: [PSKERNEL_C1.md](PSKERNEL_C1.md).
-Historical state: [WORK_STATE_BASELINE.md](docs/pskernel-c1/WORK_STATE_BASELINE.md).
-Actual C1 capability evidence: [ARENA_BASELINE_20261012.md](docs/pskernel-c1/ARENA_BASELINE_20261012.md).
+Do not mistake an independent universe/expression component for a completed independent checker. Do not mistake model-backed acceptance under a specific axiom policy for deduction checking with arbitrary axioms. The latter requires separate conditional model/derivation theorems. Do not silently run the original ConLeche checker as a fallback.
 
-## Validated implementation checkpoint
+The primary design source is [PSKERNEL_C1_NEXT_ARCHITECTURE.md](PSKERNEL_C1_NEXT_ARCHITECTURE.md). The qualified original release is documented by [PSKERNEL_C1.md](PSKERNEL_C1.md), and the historic initial state is preserved in [WORK_STATE_BASELINE.md](docs/pskernel-c1/WORK_STATE_BASELINE.md). Source implementation guides: [independent README](independent/README.md) and [bridge README](bridge/pskernel-c1/README.md).
 
-The original polynomial-component baseline passed at **`a2476126606850347c8a209f9ebd8adb56fecd1c`**. New checks are recorded separately:
+## Preserved qualified production checker
 
-| Validation | Result and exact run |
+Baseline source `2be0589fa57b6909b3551afa01e88a9326a75545` passed [CI 38165678404](https://github.com/dwijayuda/con-leche/actions/runs/38165678404) on `leanprover/lean4:v4.35.0-rc3`. Its actual CLI still invokes `ConLeche.Cached.checkDecls .verified`. Its model existence and pinned `False`/`Empty` consistency corollaries are conditional on `SetTheory V` and the modeled axiom policy. Compiler, runtime, physical IO and platform are distinct execution trust boundaries.
+
+Binary at the qualified source: 18,827,936 bytes. No repeatable speedup or substantial size reduction was demonstrated, and none is required just to continue development.
+
+The actual C1 binary's captured public Arena archive run [38171872724](https://github.com/dwijayuda/con-leche/actions/runs/38171872724) attempted 196 cases from a 223-entry metadata snapshot: **187 correct prescribed verdicts, 8 unsupported declines, 1 timeout and 27 metadata inputs not in the downloadable archive**. The eight declines stopped at six non-standard axioms and two unsafe/partial declarations; `perf/magma-list-deep-n36` timed out under its 60s per-input resource profile. No wrong accept/reject verdict was reported in completed cases, but the run FAILED qualification. This is neither a full-suite pass nor a public Arena score. Full corpus and root-cause follow-up remain mandatory. See [ARENA_BASELINE_20261012.md](docs/pskernel-c1/ARENA_BASELINE_20261012.md).
+
+## Independent implementation and verified capability
+
+The experimental `independent/` Lake package imports no ConLeche checking implementation and no external package. Its runtime implementation is written in Lean, built by a pinned Lean toolchain; this is **implementation independence**, not independent runtime/compiler verification or self-hosting.
+
+### Universes, source identity and semantic comparison
+
+- Owned all-five-constructor universe syntax, evaluation, simultaneous substitution, renaming and normalizer with proofs over ALL parameter valuations.
+- Sound and complete polynomial comparator for every zero/parameter/succ/max universe, with proofs for both positive and negative judgments.
+- Finite first-occurrence parameter-name codec. Its six proofs establish roundtrip, membership, absence behavior, nonaliasing and index stability under extension.
+- A fixed-sign `imax` compiler whose zero tests and polynomial denotations are proved exact. The independent **`compareExhaustive_correct`** theorem makes exhaustive finite sign enumeration equivalent to semantic equality for arbitrary nested `imax`. The negative outcome is justified too. This reference can be EXPONENTIAL and is NOT a production kernel-conversion strategy.
+- The proof-only `UniverseBridge.lean` transports polynomial and exhaustive comparisons to actual exported `ConLeche.Level` input through the proved finite codec, including sound negative outcomes. `compareSourceExact_correct` proves total semantic equivalence for the source representation.
+- Semantic universe equality does NOT automatically coincide with strict pinned official Lean kernel algorithmic conversion. A separately verified and measured operational comparator is still required.
+
+### Expressions, scope, substitution and abstraction
+
+- Own ten-constructor `Expr` syntax, hierarchical names, literals and untrusted binder annotation data. These are structurally represented; no unvalidated annotation becomes a proof.
+- Structural `Expr.Scoped` and executable `checkScoped` proved equivalent. Scoped `fvar idx ty` requires `ty` closed against loose bvars and containing only fvar levels earlier than `idx`.
+- Independent de Bruijn raising and general capture-safe binder instantiation have proofs of scope preservation for open replacements. Fvar type annotations are correctly ATOMIC, following the inherited checker. Additional proofs establish lifting closed replacement terms does nothing.
+- Independent binder closure `abstractAt` and `abstract1` replace a fresh fvar by its binder index while preserving scope, including all binders, lets and projections.
+- The **proof-only** [ExprBridge.lean](bridge/pskernel-c1/ExprBridge.lean) maps all ten independent expression forms to the actual reference representation and proves: (i) independent scope implies the reference bvar-scope test, (ii) independent instantiation agrees with `ConLeche.Expr.instantiate1` for a proved bvar-closed replacement, and (iii) independent abstraction agrees with `ConLeche.Expr.abstract1` at every cursor.
+- These are checked operational **component refinement** theorems, NOT yet full expression inference/conversion or the independent kernel model/consistency theorem.
+
+### Exact recent cloud evidence
+
+| Scope | Commit | Workflow |
+|---|---|---|
+| Independent universes, sign/exhaustive proof, and early 31-capstone audit | `e9ea555` | [38179387294](https://github.com/dwijayuda/con-leche/actions/runs/38179387294), passed |
+| Full source universe semantic bridge | `bee34a4` | [38179595828](https://github.com/dwijayuda/con-leche/actions/runs/38179595828), passed |
+| Independent expression and closed-lift operations | `d7965be` | [38180568264](https://github.com/dwijayuda/con-leche/actions/runs/38180568264), passed |
+| Independent abstraction plus its scope proofs | `181cc040` | [38195107171](https://github.com/dwijayuda/con-leche/actions/runs/38195107171), passed |
+| Universe semantic bridge at `181cc040` | `181cc040` | [38195107173](https://github.com/dwijayuda/con-leche/actions/runs/38195107173), passed |
+| All six expression refinement proof obligations | `181cc040` | [38195107226](https://github.com/dwijayuda/con-leche/actions/runs/38195107226), passed |
+
+The complete root CI [38195107167](https://github.com/dwijayuda/con-leche/actions/runs/38195107167) was still running when inspected. Do not infer a green result until it completes. Later commits must be qualified at their exact SHA, not merely by referring to these older runs.
+
+## Current milestone status
+
+| ID | Status |
 |---|---|
-| Independent library, proofs, tests and 16 capstone audits | Passed, [38173757176](https://github.com/dwijayuda/con-leche/actions/runs/38173757176) |
-| Seven-theorem initial universe bridge | Passed, [38173757189](https://github.com/dwijayuda/con-leche/actions/runs/38173757189) |
-| Finite name codec and 22 independent axiom guards | Passed, [38178368518](https://github.com/dwijayuda/con-leche/actions/runs/38178368518) at `0c75c9e6` |
-| Actual finite source bridge: 15 theorems | Passed, [38178500807](https://github.com/dwijayuda/con-leche/actions/runs/38178500807) at `f1d5574a` |
-| Complete root CI, including import audits and inherited standard battery | Passed, [38173757192](https://github.com/dwijayuda/con-leche/actions/runs/38173757192) |
+| C1-N0: architecture, contracts and priorities | Implemented; size reduction explicitly nonbinding |
+| C1-N1: actual-binary Arena baseline | Captured archive and gaps; full corpus and nine observed archive gaps unresolved |
+| C1-N2: independent foundational semantics | Independent universe and expression operations and several scoped/semantic refinement bridges verified; incomplete as a checker foundation |
+| C1-N3: independent full inference and algorithmic conversion | NOT implemented |
+| C1-N4: declaration installation, inductives and model preservation | NOT implemented |
+| C1-N5: assumption-relative deduction checking | Contracts designed; independent proof and implementation NOT complete |
+| C1-N6: independent runtime CLI with genuine model theorem | NOT implemented; production CLI still inherited |
+| C1-N7: full Arena and large-corpus qualification, optimization | NOT complete |
 
-The audit/documentation checkpoint following that source pins the observed theorem dependencies without modifying any Lean function, theorem statement or regression expectation. Its own workflow results must still be read at its exact revision. A historical passing run does not automatically qualify changed sources.
+## Next coherent subsystem work
 
-**This is a qualified component/development checkpoint, not full-Arena qualification or a complete independently implemented kernel.**
+1. Complete the hierarchical expression-name input-fidelity and binder-zero validation contracts. Never equate independently decoded expression metadata with a valid source declaration without a proof; duplicates and unordered lists can normalize.
+2. Establish a bound-variable opening/closing correspondence under explicit freshness, scoping and equal-annotation hypotheses; introduce no universal roundtrip that is false for open/aliased input.
+3. Create the first independently implemented inference/conversion judgments for closed, well-formed expressions, then prove an actual bridge to the existing rule-level semantics before enabling any acceptance path.
+4. Develop a reference-compatible, appropriately bounded operational universe comparator. Maintain complete semantics as a separate test/proof oracle; avoid exponential brute force on the production hot path.
+5. Generalize axiom assumptions only through a separate relative deduction contract and conditional model extension; never weaken the existing model-backed receipts.
+6. Continue declaration installation, inductives, complete Arena acquisition, large-input benchmarks, and executable/model integration until the complete proof-first checker qualifies.
 
-## Preserved production checker
+## Workflow
 
-The original qualified source is `2be0589fa57b6909b3551afa01e88a9326a75545`, [run 38165678404](https://github.com/dwijayuda/con-leche/actions/runs/38165678404). Upstream starting point: `3b37939f0d9d37bfd86299dc92d9a97fbacba29e`. The build toolchain remains `leanprover/lean4:v4.35.0-rc3`.
-
-The production CLI still calls `ConLeche.Cached.checkDecls .verified`. Its declaration/chunks/stream receipts, thirteen owned capstone guards, and model/False/Empty corollaries remain conditional on `SetTheory V`. **The production acceptance path is not yet independently implemented.** Experimental components do not silently replace or bypass it.
-
-The current production binary remains 18,827,936 bytes, SHA-256 `ebf410be6194e7184813658f76ae85d67513fe6ea093a2e058e08e15620844e9`. No repeatable speedup or substantial size reduction has been demonstrated. The inherited standard runtime battery tests the upstream executable; the C1-specific and new actual-Arena cases test C1 itself.
-
-## Implemented independent components
-
-### Basic universes
-
-The separate `independent/` Lake package owns all five universe constructors, evaluation, simultaneous substitution, renaming, conservative normalization and a positive equality fast path. It imports no ConLeche or Lean checker implementation and has no external package dependencies.
-
-`UniverseProofs.lean` proves eleven contracts over every parameter assignment, including an explicit semantically equivalent input pair for which the fast path returns unknown. Unknown is not inequality.
-
-### Complete max/successor fragment
-
-`UniversePolynomial.lean` represents a finite maximum of a constant and parameter-offset atoms. Duplicate atoms are allowed; comparison checks dominance explicitly rather than relying on hashes or an assumed unique normal form.
-
-`UniversePolynomialProofs.lean` establishes evaluation preservation, dominance soundness/completeness using a separating parameter assignment, sound positive and negative comparator results, fragment completeness, and conclusive results for arbitrary zero/parameter/successor/max expressions.
-
-**All current proofs passed**, together with **36 regression guards and four theorem examples**. The [independent evidence artifact 11714304653](https://github.com/dwijayuda/con-leche/actions/runs/38173757176/artifacts/11714304653) records the logs and source hashes. The implementation is a readable correctness baseline; it has not been shown faster than existing checkers.
-
-General imax comparison remains open. The polynomial comparator returns unknown outside its fragment; the basic normalization fast path establishes some additional imax equalities. Neither function alone is a complete arbitrary-universe comparator.
-
-### Proof-only semantic and input-fidelity bridge
-
-`bridge/pskernel-c1/UniverseBridge.lean` proves seven contracts connecting the basic independent representation, normalization and positive fast path to inherited universe semantics. Source equality requires a faithful name codec or concrete per-input roundtrip equations.
-
-The adapter is proof-only, imports no inherited comparison algorithm, and leaves ConLeche outside the independent runtime package. The generic finite codec and source-polynomial bridge are checked; integrating an actual independent checking algorithm remains open. These component bridges are not the full declaration/environment/model theorem.
-
-### Proof assumptions
-
-All **31 independent capstone footprints are pinned exactly** to their observed subsets of `propext`, `Classical.choice`, and `Quot.sound`. No proof placeholder or added semantic axiom is accepted.
-
-Among the five new capstones, `toPolynomial_sound`, `comparePolynomial_sound`, and `comparePolynomial_decides` use `propext` and `Quot.sound`. `comparePolynomial_different` and `comparePolynomial_complete` additionally use `Classical.choice`. The existing eleven exact pins are preserved.
-
-## Actual C1 Arena baseline: capability/resource gaps
-
-[Run 38171872724](https://github.com/dwijayuda/con-leche/actions/runs/38171872724), source `87ffd9d725bbd1b28e43e97d5872306489885c58`, attempted the actual C1 binary on all 196 captured public-archive inputs. Every input's digest and expected outcome matched the pinned metadata.
-
-Results: **187 matched verdicts, eight declines, one 60-second timeout, and 27 metadata cases absent from the archive**. No incorrect accept/reject verdict was recorded on completed cases. The workflow correctly failed for `perf/magma-list-deep-n36` timing out; this remains a failed resource qualification, not a full-suite pass.
-
-Six declines stopped at non-standard axioms; two stopped at unsafe/partial definition records. The absent entries include large corpora and unscored corner cases, all enumerated in the report. No missing input, decline or timeout was counted as a successful check.
-
-Metadata and archive hashes are committed in `tests/c1/arena-source.json`. [Artifact 11714189593](https://github.com/dwijayuda/con-leche/actions/runs/38171872724/artifacts/11714189593) retains the exact archive, metadata, input bytes, executable, per-input JSON results and logs. Ten evidence-harness tests passed. No new public Arena score was submitted.
-
-Do not weaken the modeled receipt to accept arbitrary axioms. Assumption-relative deduction checking needs its own derivation contract and a model-extension theorem conditional on a model of those assumptions. A larger future diagnostic budget must preserve, not overwrite, the first timeout record.
-
-## Validation infrastructure corrections
-
-The C1 telemetry test previously presumed rejected parallel installs always report a completed timing sample. The documented driver snapshots only finished workers. The test now permits zero samples only when omitted unfinished workers are disclosed and the top list is empty; four deterministic positive/negative report-contract cases exercise this rule. Runtime code and expected checker verdicts were unchanged. All 47 CLI cases and eight statistics pairs passed.
-
-The root import census now handles `independent/` as its own Lake package rather than inventing `independent.PskernelC1Independent.*` module names. Commit `c5d1a2a40e1aff5508885306956a92a818549e77` preserves all root dependency/public/fallback checks, requires the separate manifest and runs the complete independent source fence. Its dedicated proof job remains required. The one-shot exact-source maintenance workflow removed itself.
-
-The optional Mathlib bridge workflow now follows its actual package path, while C1's semantic bridge has a dedicated lightweight job. The unchanged Mathlib bridge passed [run 38172175540](https://github.com/dwijayuda/con-leche/actions/runs/38172175540). No mathematical bridge gate was disabled.
-
-Initial proof elaboration issues were repaired with correct module-stage imports, named natural-number laws, explicit contradiction and an explicit maximum equality chain. No theorem statement, algorithm verdict, or regression expectation was weakened to obtain green checks.
-
-## Milestones
-
-| Milestone | Status |
-|---|---|
-| C1-N0: priorities/architecture/baseline | Implemented and committed |
-| C1-N1: actual capability inventory | Archive captured; full corpus and nine observed gaps remain |
-| C1-N2: independent foundation | Universe laws, polynomial fragment, finite input codec and source bridge checked; imax and kernel-level conversion remain |
-| C1-N3: independent inference/conversion | Not implemented |
-| C1-N4: declaration/inductive model extension | Not implemented |
-| C1-N5: assumption-relative checking | Contract specified; generalized proof/runtime not implemented |
-| C1-N6: independent CLI/model integration | Not implemented; production CLI remains inherited |
-| C1-N7: full qualification/optimization | Not completed; no hard size target |
-
-## Next implementation actions
-
-Complete general imax comparison using explicit zero/positive cases and distinct soundness/completeness proofs. Integrate the already checked finite source codec into a future checker acceptance path. Proceed to expression/context operations, inference/conversion rules, and declaration/inductive environment preservation.
-
-Implement assumption-relative checking only with its distinct derivation theorem and conditional model extension. Integrate the independent CLI only when its actual acceptance path connects to the model theorem. Keep full-corpus acquisition and the recorded performance case as explicit qualification work rather than running expensive corpora on every small source edit.
-
-## Workflow and trust boundary
-
-Use GitHub/cloud Linux CI for Lean builds and checker execution. No Desktop Commander, unrelated project edits, branch deletion, or automatic PR merge. Use expected-head leases.
-
-Component proofs are not a full independent-kernel consistency theorem. Semantic universe equality does not replace all operational conversion obligations. Source proofs do not themselves verify the compiler, runtime primitives, physical IO, platform or scheduling. Keep model meanings, explicit hypotheses and this trust boundary visible.
-
-## Current finite-source milestone (2026-10-12)
-
-The independent `NameCodec` returns the first occurrence of each source name in a finite list and no name for an invalid index. Six proved contracts include decoding fidelity, existence, missing-name rejection, injectivity, and stable IDs on append. It does not depend on ConLeche checking code. The proof-only `UniverseBridge` now builds a finite table from actual exported level expressions; eight additional theorems prove encoding roundtrip and semantics for all five constructors, encode coverage and sound source-level equal/different results. All fifteen bridge capstones passed at [38178500807](https://github.com/dwijayuda/con-leche/actions/runs/38178500807). The root CI at this exact revision was running when recorded; later revisions need their own checks.
-
-Next, formalize an exact sign-case decomposition for arbitrary imax; cover each universe parameter's zero/successor branch and compile the resulting problem to the proved max/successor polynomial comparator. Prove semantic equivalence and completeness without assuming the procedure is efficient. An exponential complete reference belongs in proof/development, not automatically the production hot path. Strict official Lean conversion and semantic equality must remain separate contracts.
-
-This project is a checker, not a self-host compiler. It is built by a pinned Lean toolchain; native compiler/runtime and input IO remain trusted boundaries. Size reduction remains optional and never blocks correctness, capability or readability.
-
-## Complete semantic universe reference and source lifting (2026-10-12)
-
-The independent `UniverseSignCases` layer now decomposes arbitrary nested `imax` at each parameter zero/positive sign and compiles fixed-sign branches to the proved max/successor polynomial comparator. Its four proof contracts cover zero tests, evaluation, iff for fixed-sign comparison, and general successor inequality. `UniverseAllSigns` enumerates finite sign assignments and has five additional kernel-checked proofs: finite parameter dependence, signed reconstruction, sign-pattern coverage, `compareExhaustive_correct` (global semantic iff), and justified negative results. Exact 31-capstone independent evidence is [run 38179387294](https://github.com/dwijayuda/con-leche/actions/runs/38179387294) at `e9ea555`.
-
-The separate proof-only bridge lifts the full general-imax comparator to exported `ConLeche.Level` with the proved finite name codec, derives total encoded source comparison, a positive iff theorem and a negative semantic witness, and includes three full-source imax regressions. The bridge compiled all 20 theorem statements in [run 38179478229](https://github.com/dwijayuda/con-leche/actions/runs/38179478229); its final audit failed because the newly observed `compareSourceExact_total` axiom footprint uses only `propext` and `Quot.sound`. The following audit update pins that exact set. A new passing workflow at its exact commit is required for qualification.
-
-The exhaustive sign reference is potentially exponential and **not** a production-ready fast comparator or a proof of the official Lean algorithmic conversion relation. It is a sound and complete semantics specification for subsequent optimized, versioned operational mechanisms. Production CLI still inherits ConLeche and has not gained arbitrary axiom/unsafe capability or a new Arena score.
-
-## Independent expression and binder subsystem (2026-10-12)
-
-The separate runtime package now defines its own ten-constructor `Expr`, hierarchical names, literals and explicit untrusted binder-zero annotations. Executable scope checking, the structural `Expr.Scoped` judgment, capture-safe lifting, and one-binder instantiation have proved correspondence and scope preservation over the actual functions. Proof and regression CI [38180406323](https://github.com/dwijayuda/con-leche/actions/runs/38180406323) passed after a fundamental compatibility correction.
-
-ConLeche's actual `Kernel/ExprOps.lean` treats `.fvar idx ty` as atomic during bound-variable substitution, with an annotation already closed against bound variables. The independent `Scoped` invariant now explicitly requires `Scoped 0 idx ty` and `idx < ambientFvars`; neither raising nor instantiation descends into this annotation. The previous behavior was corrected as a family-level representation mismatch, rather than disguising it in a test. The independent algorithm additionally handles arbitrary *open* replacement terms capture-safely; ConLeche's reference uses closed replacements. The new `lift_above_scope` and `lift_closed` obligations prepare the exact closed-input operational bridge and must be checked at their own revision.
-
-The proof artifacts establish expression *scope*, not full type inference or an independent kernel consistency theorem. This is a local foundation in the much larger independent checker program; production acceptance remains inherited, and full Arena capability remains outstanding.
+GitHub-first cloud Linux CI only; no Desktop Commander, unrelated repositories, branch deletion or premature PR merge. Commit checkpoints on `pskernel-c1` using an expected-head lease. Run focused proof tests, then root CI; preserve the canonical `AI_WORK_STATE.md` and architecture documentation. Never count a declined input, timeout, absent corpus, proof-only component or unqualified commit as a verified complete checker. No `sorry`, `admit`, arbitrary axioms or unchecked acceptance shortcuts in new proof paths.

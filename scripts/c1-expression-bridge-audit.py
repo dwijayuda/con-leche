@@ -36,5 +36,10 @@ for name, raw in re.findall(
     seen[name] = axioms
 if set(seen) != EXPECTED:
     raise ValueError(f'partial theorem census: {seen}')
+# All six source-level bridge theorems had exactly the standard footprint
+# in cloud run 38195107226; any subsequent change requires explicit review.
+for name, actual in seen.items():
+    if actual != sorted(ALLOWED):
+        raise ValueError(f'changed exact bridge axiom footprint: {name}: {actual}')
 print(json.dumps({'scope': 'expression mapping and closed-substitution refinement',
                   'proofs': seen}, indent=2))

@@ -1,24 +1,25 @@
-# Independent universe semantic bridge
+# PSKernel-C1 proof-only integration bridges
 
-`UniverseBridge.lean` is proof-only integration work. The independent executable component remains free of ConLeche imports.
+These bridges **are not runtime acceptance fallbacks** and cannot replace independent checking or the model/consistency proof.
 
-The adapter translates all five universe constructors and proves that evaluation, normalization, and every positive comparison result agree with the existing `ConLeche.Level.eval` semantics. It does not call the inherited comparison algorithm and does not claim that semantic equality already establishes every requirement of an integrated kernel.
+## Universe semantics
 
-The source-input theorem exposes input fidelity explicitly: either prove the name codec roundtrip or provide roundtrip equations for the two concrete source levels. A finite first-occurrence input codec is now implemented. The bridge constructs tables from the actual source parameters and proves input coverage, exact roundtrip and evaluation preservation. An internal equality theorem cannot justify accidentally identifying distinct source parameters.
+[UniverseBridge.lean](UniverseBridge.lean) connects all five independent universe constructors to the inherited semantic evaluation of source `ConLeche.Level`. Finite first-occurrence name tables encode every parameter actually present. Their proofs establish exact roundtrip and semantic representation, sound positive and negative polynomial results, and a semantically complete exhaustive `imax` source comparison. It is potentially exponential and not the official kernel's operational equality algorithm.
 
-Cloud CI builds the two libraries, checks this bridge, and audits its fifteen named theorem dependencies against exact axiom pins. Both positive and negative polynomial results are proved on the original source expressions; general imax and strict Lean kernel algorithmic conversion remain separate obligations. This is not yet the expression/rule/declaration/model bridge for the full kernel, and no shipped CLI path uses it yet.
+Run [C1 universe semantic bridge CI](https://github.com/dwijayuda/con-leche/actions/workflows/c1-universe-bridge.yml). Its source/readout audit pins twenty named theorem dependency footprints.
 
-To reproduce from the repository root after installing the pinned toolchain:
+## Expression scope and binder operations
 
-```sh
-lake build ConLeche.Verify.Level
-(cd independent && lake build)
-LEAN_PATH="$PWD/independent/.lake/build/lib/lean:$PWD/.lake/build/lib/lean" \
-  lean bridge/pskernel-c1/UniverseBridge.lean
-```
+[ExprBridge.lean](ExprBridge.lean) translates the independently defined hierarchical names, universe levels, all ten expression constructors, both literals, and binder-zero metadata into the inherited reference expression format.
 
-## Complete semantic reference, not the production conversion algorithm
+Six proved contracts establish that independent scope implies the reference bound-variable scope test; that independent capture-safe substitution agrees with reference `ConLeche.Expr.instantiate1` when the replacement is provably closed against loose bound variables; and that independent binder closing agrees with reference `ConLeche.Expr.abstract1` at arbitrary binder cursors. This closes an operational representation gap without importing inherited checker execution into the independent runtime.
 
-The standalone independent `compareExhaustive` now has a proof of soundness and completeness of semantic universe equality for all five constructors, including nested `imax`, by enumerating zero/positive parameter patterns. The proof-only bridge applies it to actual exported source names through the complete finite codec and proves the Boolean outcomes reflect source evaluation. The reference algorithm can be exponentially expensive (including duplicate parameter occurrences) and must not be placed on the production hot path without a measured refinement and resource policy. Equivalence in this set-theoretic semantics is not automatically identical to pinned Lean kernel operational conversion; preserve separate conformance tests and requirements.
+The source `BinderZero.allZero` annotation is not inherently canonical. Translating it with the reference `PropWhen.ifAllZero` normalizes parameter sets, and does NOT alone prove arbitrary original binder metadata valid. Input fidelity, annotation canonicality and checker-level semantics must be justified before accepting a declaration.
 
-The complete imax source bridge also has `compareSourceExact` with a proved iff to semantic equality, after finite encoding. The entire reference family may be exponential and is proof/development tooling only; it is not an official Lean-kernel conversion implementation. Twenty source bridge capstones are audited at exact dependencies, including `compareSourceExact_total`, which uses `propext` and `Quot.sound` but not `Classical.choice`.
+Run [C1 expression operational bridge CI](https://github.com/dwijayuda/con-leche/actions/workflows/c1-expression-bridge.yml). Its six named proof capstones passed at [38195107226](https://github.com/dwijayuda/con-leche/actions/runs/38195107226). The current bridge is NOT yet a proof of independent type inference, definitional equality, declaration installation, model existence or full Lean compatibility.
+
+## Trust boundary
+
+The bridge proofs run under the pinned Lean 4.35.0-rc3 kernel/toolchain. They are source-level proofs about actual Lean functions. Compiler code generation, Lean's runtime, native primitives, physical IO, concurrency and hardware execution remain separately reported trust assumptions.
+
+See [PSKERNEL_C1_NEXT_ARCHITECTURE.md](../../PSKERNEL_C1_NEXT_ARCHITECTURE.md) for the full execution plan. Smaller code or binary size is optional and never a constraint on correctness or capability.

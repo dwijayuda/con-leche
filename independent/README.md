@@ -1,40 +1,40 @@
-# Independent C1 implementation lane
+# Independent PSKernel-C1 implementation
 
-This package implements the first independently written PSKernel-C1 components. It is not yet a declaration checker and is not on the shipped C1 CLI acceptance path.
+This separate Lean/Lake package implements a new checker foundation without importing ConLeche checking code. It is **not** the shipped `pskernel-c1` declaration checker, not a new self-hosting compiler, and not yet a full Lean4 kernel.
 
-Read the [architecture and priorities](../PSKERNEL_C1_NEXT_ARCHITECTURE.md) first. Size reduction is optional: no size target constrains correctness, capability, proofs, performance, or readability.
+[Architecture and priorities](../PSKERNEL_C1_NEXT_ARCHITECTURE.md) | [Canonical work state](../AI_WORK_STATE.md)
 
-## Implemented and proved
+## Verified modules
 
-| Module | Executable component or checked contract |
+| Module family | Scope |
 |---|---|
-| `Universe.lean` | Owned zero/successor/max/imax/parameter syntax; evaluation; simultaneous substitution; renaming; conservative normalization; positive equality fast path |
-| `UniverseProofs.lean` | Eleven substitution, renaming, semantic-preservation, positive-verdict, and explicit-incompleteness contracts |
-| `UniversePolynomial.lean` | Finite maxima of constants and parameter-offset atoms; dominance comparison; complete comparator for the imax-free fragment |
-| `UniverseSignCases.lean` and `UniverseSignCasesProofs.lean` | Exact zero/successor sign analysis of nested imax; four verified fixed-sign branch contracts |
-| `UniverseAllSigns.lean` and `UniverseAllSignsProofs.lean` | Complete semantic equality reference via finite sign enumeration; five proofs including a global iff and justified negative result (exponential, not on the runtime hot path) |
-| `NameCodec.lean` and `NameCodecProofs.lean` | Independent finite first-occurrence name IDs, partial decoder and six proof contracts; no name alias or unstable existing IDs |
-| `NameCodecTests.lean` | Source-identity regression tests |
-| `UniversePolynomialProofs.lean` | Evaluation preservation, dominance soundness/completeness, sound positive and negative verdicts, and complete/conclusive comparison for the supported fragment |
-| `PolynomialTests.lean` and `PskernelC1IndependentTests.lean` | At least fifty regression guards, seven theorem examples, and thirty-one named capstone audits |
+| `Universe`, `UniverseProofs` | Five universe constructors, evaluation, substitution, renaming and sound normalization |
+| `UniversePolynomial`, `UniversePolynomialProofs` | Sound, complete zero/parameter/succ/max polynomial equality |
+| `UniverseSignCases`, `UniverseSignCasesProofs` | Exact zero/positive branch semantics of nested `imax` |
+| `UniverseAllSigns`, `UniverseAllSignsProofs` | Fully semantically complete arbitrary-`imax` equality oracle and negative proof; exhaustive, potentially exponential |
+| `NameCodec`, `NameCodecProofs` | Finite first-occurrence IDs, optional decoding, no aliasing, stable IDs when tables extend |
+| `Expr`, `ExprProofs` | Own ten expression constructors, a decidable scope judgment, and bound-variable raising preserving scope |
+| `ExprSubst`, `ExprSubstProofs` | Capture-safe single-binder substitution, including open replacements, scope preservation, lift-closed identity |
+| `ExprAbstract`, `ExprAbstractProofs` | Close a fresh fvar into a bvar; independent scope preservation |
+| `*Tests.lean` | Regression guards, theorem interface examples and exact named-axiom audits |
 
-The polynomial comparator handles arbitrary nesting of zero, parameters, successor, and max. Tests cover reordered/grouped maxima, duplicate terms, successor distribution, dominated offsets, and distinct constant floors. Its completeness proof uses an explicit separating parameter assignment; it does not assume a unique canonical form or rely on finitely sampled assignments.
+**Important fvar invariant:** `fvar i ty` stores a type closed against loose bound variables and referencing only earlier fvar levels. Both raising and substitution treat this annotation as atomic. This is intentional alignment with the actual inherited kernel implementation—not a shortcut.
 
-General imax is not yet handled by that comparator. It returns `unknown` for that missing fragment; the basic normalization fast path can still establish some equalities involving imax. Neither unknown result is inequality. `comparePolynomial_different` separately proves the soundness of the polynomial comparator's conclusive negative result.
+**Important binder annotation invariant:** `BinderZero` is untrusted representation. An `allZero` list is not assumed sorted/deduplicated or semantically validated. Inference/conversion must discharge those obligations separately.
 
-These are proofs of the actual functions, not a consistency proof for an entire independent kernel. There is no inherited checking call, external package dependency, foreign-function implementation, or runtime model computation in these components.
+**Important universe distinction:** `compareExhaustive` proves semantic equality for all five constructors, not the pinned official Lean kernel's algorithmic conversion relation. It is a proof/development reference, not an acceptable unbounded production hot-path implementation.
 
-## Checked evidence
+## Proof-only integration
 
-At source `a2476126606850347c8a209f9ebd8adb56fecd1c`, [run 38173757176](https://github.com/dwijayuda/con-leche/actions/runs/38173757176) passed the warning-free independent build, all regression guards and theorem examples, the import/trust fence, and all sixteen capstone audits. [Artifact 11714304653](https://github.com/dwijayuda/con-leche/actions/runs/38173757176/artifacts/11714304653) retains the build logs and exact source hashes.
+The [universe bridge](../bridge/pskernel-c1/UniverseBridge.lean) proves source-name encoding fidelity and semantic comparison against actual exported reference levels.
 
-Every capstone's observed dependency subset is pinned in `scripts/c1-independent-audit.py`. The only allowed global proof foundations are `propext`, `Classical.choice`, and `Quot.sound`; not every theorem uses all three. No proof placeholder or new semantic axiom is accepted.
+The [expression bridge](../bridge/pskernel-c1/ExprBridge.lean) proves that the independent expression representation preserves reference bound-variable scope, and that the actual independent `instantiate1` (with a provably bvar-closed replacement) and `abstract1` commute with the corresponding `ConLeche.Expr` executable operations. These bridges import inherited code ONLY for their proofs; the independent runtime package remains clean.
 
-The separate [proof-only universe bridge](../bridge/pskernel-c1/README.md) connects the basic universe representation and positive fast path to the inherited semantics, with input-name fidelity explicit. Its seven theorems passed [run 38173757189](https://github.com/dwijayuda/con-leche/actions/runs/38173757189) at the same source. It imports ConLeche only in that proof adapter, not in this runtime package. The later semantic bridge run [38178500807](https://github.com/dwijayuda/con-leche/actions/runs/38178500807) also proved finite source encoding and transported positive/negative polynomial outcomes; an actual independent checker acceptance path is still missing.
+At commit `181cc040641d3065f2baa808d5729c835e4eeb02`, independent tests passed [run 38195107171](https://github.com/dwijayuda/con-leche/actions/runs/38195107171), the expression bridge passed [run 38195107226](https://github.com/dwijayuda/con-leche/actions/runs/38195107226), and the universe bridge passed [run 38195107173](https://github.com/dwijayuda/con-leche/actions/runs/38195107173). Later changes need their own green validation.
 
-## Build and audit
+## Build
 
-The package uses the enclosing repository's `lean-toolchain`.
+Use the repository's pinned Lean toolchain:
 
 ```sh
 cd independent
@@ -43,24 +43,8 @@ lake test
 lake env lean PskernelC1IndependentTests.lean
 ```
 
-Cloud Linux CI builds the proofs and regression examples warning-free, scans all independent source/imports, and audits each named theorem footprint from the direct root capstone census. New modules must import their proof interface explicitly in the root audit: an ordinary import from a test submodule is not re-exported. The normal repository CI still checks the inherited declaration checker independently. Historical passing evidence does not automatically qualify changed sources.
+`scripts/c1-independent-audit.py` checks imports, forbidden trust constructs and exact named capstone dependencies. The separate expression and universe bridge cloud workflows prove operational/semantic cross-implementation obligations and check no new proof assumptions.
 
-## Still required
+## Remaining capability
 
-Optimized kernel-compatible operational imax comparison, checker-level integration of the proved finite source-name codec, expression/context operations, inference, conversion, declaration/inductive installation, the assumption-relative policy, parser/driver integration, and the independent checker-to-model theorem are not implemented here yet.
-
-The list-based polynomial dominance implementation is a readable correctness baseline; no hot-path performance superiority is claimed. No full-Arena, full-independent-kernel, speedup, or binary-size claim follows from these component proofs.
-
-## Independent expression and scope foundation (in development)
-
-The new independent `Expr` AST preserves ten kernel expression constructors (including locally nameless `fvar`s and typed annotations). Binder propositions are untrusted structured input until the later kernel checker validates their semantic meaning; duplicate or unordered annotation parameters are NOT silently assumed canonical. A separate structural `Scoped` judgment and a runnable scope checker specify variable-depth correctness. Capture-safe raising shifts only variables above the cutoff and increments the cutoff when entering binder bodies, not their types or let values. The scope-preservation theorem belongs to the independent checker foundations, not a proof of inference/conversion or declaration checking. Follow its exact cloud CI result before claiming qualification.
-
-## Capture-safe binder instantiation (in development)
-
-The actual `instantiateAt`/`instantiate1` implementation removes one bound-variable level, raises replacements under intervening binder bodies, lowers indices above the eliminated binder and traverses fvar-type annotations. Its proofs establish the scope-preserving precondition for beta/zeta reduction with arbitrary open replacement terms, including nested lets and dependent binder domains. This is not yet an evaluator or a type-checker acceptance theorem. The proof audit and cloud CI must qualify its exact commit.
-
-### Correctness invariant: typed free variables are atomic under bound substitution
-
-A whole-subsystem inspection of `ConLeche/Kernel/ExprOps.lean` found that both its binder instantiation and abstraction/metadata walks treat `.fvar index type` as an atomic expression; its annotated type is a previously closed term, not a subtree where loose binder indices may be substituted. The independent implementation now enforces a stronger explicitly scoped construction rule: an fvar at level `i` may refer only to fvar levels `< i` in its type, and its type contains no loose `bvar`. Consequently, both bound-variable raising and binder instantiation leave fvar type annotations unchanged. The scope and substitution proofs are about the corrected functions, not a stale implementation. Arbitrary open replacement expressions still receive capture-avoiding lifting; the inherited kernel uses already closed replacements. A later operational refinement must prove equivalence under that precondition. This guards against an entire family of binder-capture/annotation mismatches, instead of patching sample terms.
-
-A later closed-replacement operational bridge can use the proved invariant `lift_above_scope`: raising an expression above its actual bound-variable depth leaves it unchanged. The special case `lift_closed` means a replacement already closed against all loose bound variables does not need shifting at any binder depth; this is exactly the precondition documented by inherited `ConLeche.Expr.instantiate1`. A proof-only cross-implementation refinement is the next required step.
+Independent full inference, algorithmic conversion, typed contexts, declaration/inductive installation, arbitrary-assumption ledger, model-extension proof, direct CLI acceptance, full official Lean compatibility, full Arena, and large-corpus performance remain outstanding. Size reduction is explicitly optional: correctness, capability, measured performance, proof assurance and readability take precedence.
