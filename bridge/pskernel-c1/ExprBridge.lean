@@ -75,9 +75,9 @@ resulting proposition-zero datum remains the responsibility of checking. -/
 checked independent structural scope judgment. Free-variable type
 annotations are atomic to both traversals. -/
 theorem scoped_reference_bvars (names : Nat → ConLeche.Name)
-    {db fv : Nat} {term : Expr} (scoped : Expr.Scoped db fv term) :
+    {db fv : Nat} {term : Expr} (hscope : Expr.Scoped db fv term) :
     ConLeche.Expr.looseBVarsBounded db (exprToReference names term) = true := by
-  induction scoped with
+  induction hscope with
   | bvar hi =>
     simpa [exprToReference, ConLeche.Expr.looseBVarsBounded] using
       (show decide (_ < _) = true from decide_eq_true hi)
