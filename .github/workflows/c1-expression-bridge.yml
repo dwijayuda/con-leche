@@ -1,0 +1,67 @@
+name: C1 expression operational bridge
+
+on:
+  push:
+    branches: [pskernel-c1]
+    paths:
+      - 'bridge/pskernel-c1/ExprBridge.lean'
+      - 'independent/**'
+      - 'scripts/c1-expression-bridge-audit.py'
+      - '.github/workflows/c1-expression-bridge.yml'
+      - 'ConLeche/Kernel/ExprOps.lean'
+      - 'lean-toolchain'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: c1-expression-bridge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  proof-bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Lean
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Restore earlier root proof objects
+        uses: actions/cache/restore@v4
+        with:
+          path: .lake
+          key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: |
+            lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json') }}-
+            lake-${{ runner.os }}-
+      - name: Compile both actual implementations
+        run: |
+          set -euo pipefail
+          mkdir -p _tmp/c1-next
+          git rev-parse HEAD | tee _tmp/c1-next/expr-revision.txt
+          lean --version | tee _tmp/c1-next/expr-toolchain.txt
+          python3 scripts/c1-independent-audit.py
+          lake build ConLeche.Rules.Rel ConLeche.Kernel.ExprOps 2>&1 | tee _tmp/c1-next/expr-reference.log
+          (cd independent && lake build) 2>&1 | tee _tmp/c1-next/expr-independent.log
+      - name: Prove refinement and audit trust
+        run: |
+          set -euo pipefail
+          LEAN_PATH="$PWD/independent/.lake/build/lib/lean:$PWD/.lake/build/lib/lean" \
+            lean bridge/pskernel-c1/ExprBridge.lean 2>&1 | tee _tmp/c1-next/expr-proof.log
+          if grep -n 'warning:' _tmp/c1-next/expr-{reference,independent,proof}.log; then
+            echo "::error::Expression refinement must build without warnings."
+            exit 1
+          fi
+          python3 scripts/c1-expression-bridge-audit.py _tmp/c1-next/expr-proof.log |
+            tee _tmp/c1-next/expr-audit.json
+      - name: Retain exact-source evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c1-expression-bridge-${{ github.sha }}
+          path: _tmp/c1-next/
+          if-no-files-found: error

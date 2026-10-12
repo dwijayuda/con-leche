@@ -1,0 +1,78 @@
+name: C1 actual-binary Arena inventory
+
+on:
+  push:
+    branches: [pskernel-c1]
+    paths:
+      - 'scripts/c1_arena_baseline.py'
+      - 'scripts/c1-arena-observe.py'
+      - 'tests/c1/test_arena_baseline.py'
+      - 'tests/c1/arena-source.json'
+      - '.github/workflows/c1-arena-baseline.yml'
+      - 'PskernelC1/**'
+      - 'ConLeche/**'
+      - 'lean-toolchain'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: c1-arena-inventory-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  captured-subset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test evidence classification and input integrity
+        run: python3 -m unittest discover -s tests/c1 -p test_arena_baseline.py -v
+      - name: Report the actual cloud snapshot before enforcing its pin
+        run: python3 scripts/c1-arena-observe.py
+      - name: Install pinned Lean
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Report toolchain
+        run: lean --version
+      - name: Reuse qualified dependency builds
+        uses: actions/cache/restore@v4
+        with:
+          path: .lake
+          key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: |
+            lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json') }}-
+            lake-${{ runner.os }}-
+      - name: Check the actual C1 model contract before the executable
+        run: |
+          set -euo pipefail
+          mkdir -p _tmp/c1-next
+          timeout 1200 lake build PskernelC1Proof PskernelC1Tests 2>&1 | tee _tmp/c1-next/arena-proof.log
+          timeout 1200 lake build pskernel-c1 2>&1 | tee _tmp/c1-next/arena-build.log
+          if grep -n 'warning:' _tmp/c1-next/arena-{proof,build}.log; then
+            echo '::error::C1 proof and executable builds must be warning-free.'
+            exit 1
+          fi
+      - name: Capture and check the actual C1 archive subset
+        run: |
+          set -euo pipefail
+          python3 scripts/c1_arena_baseline.py \
+            --binary .lake/build/bin/pskernel-c1 \
+            --expected-source-revision "${{ github.sha }}" \
+            --snapshot-mode capture --jobs 1 --case-timeout 60 --budget-seconds 900
+      - name: Publish scope and missing-test inventory
+        if: always()
+        run: |
+          if test -f _tmp/c1-next/arena/summary.md; then
+            cat _tmp/c1-next/arena/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Retain exact corpus, binary, hashes and per-input evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c1-arena-inventory-${{ github.sha }}
+          path: _tmp/c1-next
+          if-no-files-found: error

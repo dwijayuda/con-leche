@@ -1,0 +1,70 @@
+name: C1 universe semantic bridge
+
+on:
+  push:
+    branches: [pskernel-c1]
+    paths:
+      - 'independent/**'
+      - 'bridge/pskernel-c1/**'
+      - 'scripts/c1-bridge-audit.py'
+      - 'scripts/c1-independent-audit.py'
+      - '.github/workflows/c1-universe-bridge.yml'
+      - 'ConLeche/Kernel/Level.lean'
+      - 'ConLeche/Verify/Level.lean'
+      - 'lean-toolchain'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: c1-universe-bridge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semantic-bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Lean
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Report source and toolchain
+        run: |
+          mkdir -p _tmp/c1-next
+          git rev-parse HEAD | tee _tmp/c1-next/bridge-revision.txt
+          lean --version | tee _tmp/c1-next/bridge-toolchain.txt
+      - name: Reuse inherited proof modules
+        uses: actions/cache/restore@v4
+        with:
+          path: .lake
+          key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: |
+            lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json') }}-
+            lake-${{ runner.os }}-
+      - name: Build independent functions and reference universe semantics
+        run: |
+          set -euo pipefail
+          python3 scripts/c1-independent-audit.py
+          lake build ConLeche.Verify.Level 2>&1 | tee _tmp/c1-next/bridge-reference.log
+          (cd independent && lake build) 2>&1 | tee _tmp/c1-next/bridge-independent.log
+      - name: Check the semantic and input-fidelity bridge
+        run: |
+          set -euo pipefail
+          LEAN_PATH="$PWD/independent/.lake/build/lib/lean:$PWD/.lake/build/lib/lean" \
+            lean bridge/pskernel-c1/UniverseBridge.lean 2>&1 | tee _tmp/c1-next/bridge-proof.log
+          if grep -n 'warning:' _tmp/c1-next/bridge-{reference,independent,proof}.log; then
+            echo '::error::Universe bridge proof must be warning-free.'
+            exit 1
+          fi
+          python3 scripts/c1-bridge-audit.py _tmp/c1-next/bridge-proof.log | tee _tmp/c1-next/bridge-audit.json
+      - name: Retain bridge evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c1-universe-bridge-${{ github.sha }}
+          path: _tmp/c1-next
+          if-no-files-found: error

@@ -1,0 +1,11 @@
+module
+
+public import PskernelC1Independent.UniversePolynomialProofs
+public import PskernelC1Independent.NameCodecProofs
+public import PskernelC1Independent.UniverseSignCasesProofs
+public import PskernelC1Independent.UniverseAllSignsProofs
+public import PskernelC1Independent.ExprProofs
+public import PskernelC1Independent.ExprSubstProofs
+public import PskernelC1Independent.ExprAbstractProofs
+public import PskernelC1Independent.InferHeadProofs
+public import PskernelC1Independent.InferContextProofs

@@ -100406,3 +100406,82 @@ machine; the parse on `master` before this extraction: 23.2 s, the
 install extraction's run). No measurement campaign: the maintainer
 takes a before/after measurement separately. Logs and the binary:
 `_tmp/amdahl/xparse-logs/`.
+
+## PSKernel C1: the proved boundary first (2026-10-11)
+
+The `pskernel-c1` branch starts from con-leche revision `3b37939f` and
+retains its checker, model and proofs. The owned surface is
+`PskernelC1/Kernel.lean`: `checkDeclarations` fixes `.verified` and
+`natOpPinSets`; `checkChunks` adds the existing streaming parser and
+prelude preparation. The receipt types `Accepted`, `AcceptedChunks`
+and `AcceptedStream` require successful equations for these actual
+functions. The stream receipt keeps its chunks existentially inside a
+proposition, so it does not retain the input bytes at runtime.
+
+`PskernelC1/Soundness.lean` transfers the existing model and consistency
+theorems to that boundary. They remain relative to `[SetTheory V]`,
+with the inherited support policy and trust boundary. A future driver
+must produce the same acceptance evidence or prove a replacement
+refines it. The first executable reuses `Driver.parseInput` and
+`Driver.checkDeclsIO`; its success branch composes their witnesses into
+an `AcceptedStream` before printing acceptance. No second checker run
+or copied checker loop supplies the proof. The model tier is absent
+from the executable's imports. This is a small owned interface over
+the inherited implementation and proof development, not a claim that
+the entire checker or its foundation is small.
+
+**One conservative runtime change.** `Driver.checkDeclsIO` gains a
+trailing `collectStats : Bool := true`. Existing con-leche callers
+therefore retain their statistics. C1 defaults to false and exposes
+`--stats` to opt in. The flag is threaded through the existing serial
+and parallel install/check paths: disabled statistics skip per-record
+clock samples, `WStats` updates, commit timing counters and reference
+updates, end-of-run report collection and printing, and the peak-RSS
+file read. Progress, if a different caller requests it, retains its
+own in-flight timestamps and counters. A few fixed-cost phase setup
+timestamps remain in the parallel installer. The loops still thread
+their state as plain tail-recursive arguments; no closure captures the
+mutable index for statistics, and no mutation or check decides its
+behavior from a timing value. The result's acceptance equation,
+declaration ordering, first-failure handling and worker draining are
+unchanged. No new axiom or runtime escape is introduced.
+
+**Validation and measurement.** The executable and theorem checks run
+in GitHub's Linux CI; no local Lean build is used for this branch.
+`tests/pskernel-c1-stats.sh` compares statistics off/on at one and two
+workers for acceptance, check rejection, install rejection and a
+custom-axiom decline. It requires the same exit codes and verdict
+output, the requested report presence, and the upstream default report.
+Every checker invocation has a timeout. C1's source, axiom and CLI
+gates accompany the existing warning-free build, tests and source
+fences. The paired resource smoke uses the same committed input bytes,
+revision, toolchain and worker count; it alternates C1, C1 with stats,
+and con-leche and records repeated CPU time, elapsed time, peak RSS,
+and user instructions where the runner exposes counters. Timing on a
+shared runner has no performance threshold. For a throughput claim,
+repeat representative large exports on a controlled host with at least
+three samples and report input hashes and medians. Removing telemetry
+is the concrete change; no speedup percentage is asserted before that
+measurement.
+
+### C1 import-audit integration
+
+The census now recognizes the three C1 source modules. The two executables
+each export Lean's global `main`, so the audit imports them into separate
+environments, each with the full common proof/runtime roots. The public
+import planner checks one candidate source graph against both environments;
+name resolution, namespace obligations and baseline-imprecision allowances
+remain specific to each environment. Concatenating the contexts would
+conflate names and could hide a required re-export. Focused source-only
+regressions reproduced that failure with a deliberately merged context.
+
+The only new global shake proposal was the public `ConLeche.MainTheorem`
+edge in `PskernelC1/Soundness.lean`. CI run 38165052920 at `d6b7747` compared
+`--only PskernelC1.Soundness` with `--only ConLeche.NoSuchModule` in both
+executable views. Each comparison proposed replacing that one edge by
+plain `ConLeche.MainTheorem`, public `ConLeche.Accepts` and public
+`ConLeche.Denotes` imports in the same module. Task #223's compensated
+criterion retains the original import, recorded as one measured allowance.
+The independent public-import gate reported none demotable. The temporary
+diagnostic is removed after recording its evidence; the normal gates still
+fail on new or stale allowances and individually demotable public imports.

@@ -1,0 +1,141 @@
+module
+
+import PskernelC1Independent.UniversePolynomialProofs
+import PskernelC1Independent.PolynomialTests
+import PskernelC1Independent.NameCodecTests
+import PskernelC1Independent.SignCasesTests
+import PskernelC1Independent.AllSignsTests
+import PskernelC1Independent.ExprTests
+import PskernelC1Independent.ExprSubstTests
+import PskernelC1Independent.ExprAbstractTests
+import PskernelC1Independent.InferHeadTests
+import PskernelC1Independent.InferContextTests
+import PskernelC1Independent.InferContextProofs
+import PskernelC1Independent.InferHeadProofs
+import PskernelC1Independent.ExprAbstractProofs
+import PskernelC1Independent.ExprSubstProofs
+import PskernelC1Independent.ExprProofs
+import PskernelC1Independent.UniverseAllSignsProofs
+-- The audit root names each theorem directly; ordinary test imports do not re-export them.
+import PskernelC1Independent.UniverseSignCasesProofs
+-- Non-public imports in the test module are not re-exported into this root.
+import PskernelC1Independent.NameCodecProofs
+-- #guard evaluates these functions during elaboration as well as using their
+-- logical definitions; the module system requires an explicit meta import.
+public meta import PskernelC1Independent.Universe
+
+public section
+
+open PskernelC1Independent
+open PskernelC1Independent.Level
+
+-- All five constructors and both impredicative branches.
+#guard eval (fun _ => 4) .zero = 0
+#guard eval (fun _ => 4) (.param 91) = 4
+#guard eval (fun _ => 4) (.succ (.param 91)) = 5
+#guard eval (fun id => id) (.max (.param 3) (.param 9)) = 9
+#guard eval (fun _ => 0) (.imax (.succ (.succ .zero)) (.param 8)) = 0
+#guard eval (fun _ => 1) (.imax (.succ (.succ .zero)) (.param 8)) = 2
+#guard eval (fun _ => 5) (.imax (.param 0) (.succ .zero)) = 5
+
+-- Replacement is simultaneous: the inserted parameter is not rewritten again.
+#guard substitute (fun id => .param (id + 1)) (.param 0) = .param 1
+#guard substitute (fun id => .succ (.param id)) (.imax (.param 0) (.param 1)) =
+  .imax (.succ (.param 0)) (.succ (.param 1))
+#guard rename (fun id => id + 7) (.max (.param 0) (.param 3)) =
+  .max (.param 7) (.param 10)
+
+-- Sound positive simplifications and explicit incompleteness.
+#guard normalize (.max .zero (.param 3)) = .param 3
+#guard normalize (.max (.param 3) .zero) = .param 3
+#guard normalize (.imax (.param 3) .zero) = .zero
+#guard normalize (.imax .zero (.succ (.param 4))) = .succ (.param 4)
+#guard compareFast (.max .zero (.param 3)) (.param 3) = .equal
+#guard compareFast (.imax (.param 3) .zero) .zero = .equal
+#guard compareFast (.succ .zero) .zero = .unknown
+#guard compareFast (.param 0) (.param 1) = .unknown
+#guard compareFast (.max (.param 0) (.param 1)) (.max (.param 1) (.param 0)) = .unknown
+#guard compareFast (.imax (.param 0) (.param 1)) (.max (.param 0) (.param 1)) = .unknown
+
+example (l : Level) : Equivalent l (normalize l) := normalize_sound l
+example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
+  compareFast_sound a b h
+
+#print axioms eval_substitute
+#print axioms substitute_identity
+#print axioms substitute_compose
+#print axioms eval_rename
+#print axioms eval_maxSmart
+#print axioms eval_imaxSmart
+#print axioms eval_normalize
+#print axioms normalize_sound
+#print axioms compareFast_sound
+#print axioms compareFast_reflexive
+#print axioms unknown_can_be_equivalent
+#print axioms toPolynomial_sound
+#print axioms comparePolynomial_sound
+#print axioms comparePolynomial_different
+#print axioms comparePolynomial_complete
+#print axioms comparePolynomial_decides
+
+-- The whole independent package's axiom census lives at one root.
+#print axioms PskernelC1Independent.NameCodec.get?_mem
+#print axioms PskernelC1Independent.NameCodec.index?_sound
+#print axioms PskernelC1Independent.NameCodec.index?_complete
+#print axioms PskernelC1Independent.NameCodec.index?_none_iff
+#print axioms PskernelC1Independent.NameCodec.index?_injective
+#print axioms PskernelC1Independent.NameCodec.index?_append_left
+
+#print axioms PskernelC1Independent.Level.zeroAtSigns_spec
+#print axioms PskernelC1Independent.Level.compileSigned_eval
+#print axioms PskernelC1Independent.Level.compareSigned_correct
+#print axioms PskernelC1Independent.Level.compareSigned_successor_different
+
+#print axioms PskernelC1Independent.Level.eval_ext_parameterIds
+#print axioms PskernelC1Independent.Level.signed_reconstruct
+#print axioms PskernelC1Independent.Level.signPatterns_cover
+#print axioms PskernelC1Independent.Level.compareExhaustive_correct
+#print axioms PskernelC1Independent.Level.compareExhaustive_different
+
+#print axioms PskernelC1Independent.Expr.checkScoped_sound
+#print axioms PskernelC1Independent.Expr.checkScoped_complete
+#print axioms PskernelC1Independent.Expr.checkScoped_iff
+#print axioms PskernelC1Independent.Expr.Scoped.lift
+#print axioms PskernelC1Independent.Expr.checkScoped_lift
+
+#print axioms PskernelC1Independent.Expr.lift_zero
+#print axioms PskernelC1Independent.Expr.instantiate1_bvar0
+#print axioms PskernelC1Independent.Expr.instantiateAt_preserves_scope
+#print axioms PskernelC1Independent.Expr.instantiate1_preserves_scope
+
+#print axioms PskernelC1Independent.Expr.lift_above_scope
+#print axioms PskernelC1Independent.Expr.lift_closed
+
+#print axioms PskernelC1Independent.Expr.abstractAt_preserves_scope
+#print axioms PskernelC1Independent.Expr.abstract1_preserves_scope
+#print axioms PskernelC1Independent.Expr.checkScoped_abstract1
+
+#print axioms PskernelC1Independent.Expr.Scoped.weakenFVars
+#print axioms PskernelC1Independent.Expr.inferHead_sound
+#print axioms PskernelC1Independent.Expr.inferHead_complete
+#print axioms PskernelC1Independent.Expr.inferHead_iff
+#print axioms PskernelC1Independent.Expr.inferHead_output_scoped
+
+#print axioms PskernelC1Independent.Expr.inferHead_invalidScope
+#print axioms PskernelC1Independent.Expr.inferHead_unsupported_scoped
+
+#print axioms PskernelC1Independent.LocalContext.lookup_bounded
+#print axioms PskernelC1Independent.LocalContext.lookup_unique
+#print axioms PskernelC1Independent.Expr.inferHeadIn_sound
+#print axioms PskernelC1Independent.Expr.inferHeadIn_complete
+#print axioms PskernelC1Independent.Expr.inferHeadIn_iff
+#print axioms PskernelC1Independent.Expr.inferHeadIn_unique
+
+#print axioms PskernelC1Independent.Expr.ContextHeadDerives.toHeadDerives
+#print axioms PskernelC1Independent.Expr.inferHeadIn_toHead
+
+#print axioms PskernelC1Independent.LocalContext.checkFrom_correct
+#print axioms PskernelC1Independent.LocalContext.checkContext_correct
+#print axioms PskernelC1Independent.Expr.inferChecked_sound
+#print axioms PskernelC1Independent.Expr.inferChecked_complete
+#print axioms PskernelC1Independent.Expr.inferChecked_iff

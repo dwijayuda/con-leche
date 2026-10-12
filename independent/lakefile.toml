@@ -1,0 +1,11 @@
+name = "pskernel-c1-independent"
+defaultTargets = ["PskernelC1Independent", "PskernelC1IndependentTests"]
+testDriver = "PskernelC1IndependentTests"
+
+# No external packages. Elan finds the enclosing repository's lean-toolchain.
+# This library is experimental; it is not the shipped declaration checker.
+[[lean_lib]]
+name = "PskernelC1Independent"
+
+[[lean_lib]]
+name = "PskernelC1IndependentTests"

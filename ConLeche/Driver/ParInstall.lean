@@ -150,10 +150,10 @@ the stream's record index: the prepare step prepends the built-in
 prelude and drops the stream's identical copies of its records, so the
 two drift apart by a stream-dependent amount.  Calibrate by NAME.
 
-Each step is timed into `st` (`WStats`, performance-only: a ref only
-this thread touches). -/
+When `collectStats`, each step is timed into `st` (`WStats`,
+performance-only: a ref only this thread touches). -/
 def installLoop (mode : ConLeche.CheckMode) (err : IO.FS.Stream)
-    (stride total t0 : Nat) (st : IO.Ref WStats)
+    (stride total t0 : Nat) (st : IO.Ref WStats) (collectStats : Bool)
     (ds : Array ConLeche.Declaration)
     (p₀ : Nat × ConLeche.FEnv × Array ConLeche.Cached.PendingCheck) :
     (i : Nat) →
@@ -172,20 +172,20 @@ def installLoop (mode : ConLeche.CheckMode) (err : IO.FS.Stream)
           {ConLeche.Cached.declCLabel pd} \
           t={ConLeche.Cached.msSecs (now - t0)}s\n"
         err.flush
-      let ts ← IO.monoNanosNow
+      let ts ← statsNanos collectStats
       match h : ConLeche.Cached.annotDeclStep mode ConLeche.natOpPinSets p pd with
       | .ok p₁ =>
-        let te ← IO.monoNanosNow
-        st.modify (·.add i ts te)
-        installLoop mode err stride total t0 st ds p₀ (i + 1) p₁ (by
+        let te ← statsNanos collectStats
+        if collectStats then st.modify (·.add i ts te)
+        installLoop mode err stride total t0 st collectStats ds p₀ (i + 1) p₁ (by
           have hlist : ds.toList.take (i + 1) = ds.toList.take i ++ [pd] := by
             rw [List.take_add_one]
             simp [pd, Array.getElem?_eq_getElem hi]
           rw [hlist]
           exact ConLeche.Cached.InstallRun.snoc mode hrun h)
       | .error e =>
-        let te ← IO.monoNanosNow
-        st.modify (·.add i ts te)
+        let te ← statsNanos collectStats
+        if collectStats then st.modify (·.add i ts te)
         return .error e
     else
       return .ok ⟨p, ⟨by
@@ -576,6 +576,8 @@ structure Shared (mode : CheckMode) (ds : Array Declaration) (B : BaseIdx) (S : 
   state : Array (IO.Ref (RState (WRes mode ds B S vis)))
   sched : Sched
   noMark : Bool
+  /-- Accumulate performance-only per-record statistics. -/
+  collectStats : Bool
   /-- `k + 1` while the commit thread sleeps waiting for record `k`,
   else `0` -/
   commitWait : IO.Ref Nat
@@ -658,13 +660,13 @@ def deferRecord (sc : Sched) (k : Nat) : IO Unit := do
 record it is on). -/
 @[inline] def installTimed (sh : Shared mode ds B S vis) (w k : Nat) (st : WStats) :
     IO (WRes mode ds B S vis × Option Nat × WStats) := do
-  let ts ← IO.monoNanosNow
   let lv := sh.live.cur.size > 0
+  let ts ← statsNanos (sh.collectStats || lv)
   if lv then sh.live.begin w k ts
   let (q, next) ← installAndPublish sh k
-  let te ← IO.monoNanosNow
+  let te ← statsNanos sh.collectStats
   if lv then sh.live.idle w
-  return (q, next, st.add k ts te)
+  return (q, next, if sh.collectStats then st.add k ts te else st)
 
 /-- One worker (number `w`): install the record its last install made
 ready, else the next ready one, repeat until stopped; returns its
@@ -716,7 +718,8 @@ partial def waitDone (sh : Shared mode ds B S vis) (cst : IO.Ref (Array Nat)) (k
   | none => return none
   | some st =>
     if let .done q ← st.get then return some q
-    let t0 ← IO.monoNanosNow
+    let timed := sh.collectStats || sh.live.cur.size > 0
+    let t0 ← statsNanos timed
     sh.commitWait.set (k + 1)
     sh.commitLock.lock
     let rec sleep : IO (WRes mode ds B S vis) := do
@@ -726,8 +729,9 @@ partial def waitDone (sh : Shared mode ds B S vis) (cst : IO.Ref (Array Nat)) (k
     let q ← sleep
     sh.commitLock.unlock
     sh.commitWait.set 0
-    let t1 ← IO.monoNanosNow
-    cst.modify fun a => (a.modify 0 (· + 1)).modify 1 (· + (t1 - t0))
+    let t1 ← statsNanos timed
+    if timed then
+      cst.modify fun a => (a.modify 0 (· + 1)).modify 1 (· + (t1 - t0))
     return some q
 
 /-- The internal error of a misprediction (exit 3): no input reaches it
@@ -778,12 +782,15 @@ def commitLoop (err : IO.FS.Stream) (stride total t0 : Nat)
         let q? : Option (WRes mode ds B S vis) ← do
           if let some q ← peekDone sh k then pure (some q)
           else if ← tryTake sh k then
-            let tf0 ← IO.monoNanosNow
-            let (q, next, st) ← installTimed sh (sh.live.cur.size - 1) k (← sh.selfStats.get)
-            sh.selfStats.set st
+            let timed := sh.collectStats || stride > 0
+            let tf0 ← statsNanos timed
+            let st ← if sh.collectStats then sh.selfStats.get else pure {}
+            let (q, next, st) ← installTimed sh (sh.live.cur.size - 1) k st
+            if sh.collectStats then sh.selfStats.set st
             if let some d := next then deferRecord sh.sched d
-            let tf1 ← IO.monoNanosNow
-            cst.modify fun a => (a.modify 2 (· + 1)).modify 3 (· + (tf1 - tf0))
+            let tf1 ← statsNanos timed
+            if timed then
+              cst.modify fun a => (a.modify 2 (· + 1)).modify 3 (· + (tf1 - tf0))
             pure (some q)
           else waitDone sh cst k
         match q? with
@@ -845,7 +852,7 @@ CLI runs after the verdict line is out and before the process exits
 (`Main.lean`'s `main`). -/
 def parInstall (mode : CheckMode) (err : IO.FS.Stream) (stride total t0 jobs : Nat)
     (noMark : Bool) (rep : IO.Ref (IO (Option PoolRep))) (drain : IO.Ref (IO Unit))
-    (ds : Array Declaration) :
+    (ds : Array Declaration) (collectStats : Bool := true) :
     IO (Except (CheckError × Nat)
       (Σ' (p' : Nat × FEnv × Array Cached.PendingCheck),
         PLift (Cached.InstallRun mode natOpPinSets ds.toList
@@ -984,11 +991,11 @@ def parInstall (mode : CheckMode) (err : IO.FS.Stream) (stride total t0 jobs : N
       stop := ← IO.mkRef false, lock := ← Std.BaseMutex.new, cv := ← Std.Condvar.new }
   let selfStats ← IO.mkRef ({} : WStats)
   let sh : ParInstall.Shared mode ds B S vis :=
-    { slotP, state, sched, noMark, commitWait := ← IO.mkRef 0,
+    { slotP, state, sched, noMark, collectStats, commitWait := ← IO.mkRef 0,
       commitLock := ← Std.BaseMutex.new, commitCv := ← Std.Condvar.new,
       selfStats, live := ← Live.new (if stride > 0 then jobs + 1 else 0) }
   let tD ← IO.monoMsNow
-  let tStart ← IO.monoNanosNow
+  let tStart ← statsNanos collectStats
   let mut tasks := #[]
   for w in [0:jobs] do
     tasks := tasks.push
@@ -1019,7 +1026,7 @@ def parInstall (mode : CheckMode) (err : IO.FS.Stream) (stride total t0 jobs : N
     catch ex =>
       ParInstall.stopWorkers sh true
       throw ex
-  let tEnd ← IO.monoNanosNow
+  let tEnd ← statsNanos collectStats
   let tE ← IO.monoMsNow
   -- the timing report, collected when the summary is printed, from the
   -- workers that have finished by then.  It waits for none: after a
@@ -1030,19 +1037,20 @@ def parInstall (mode : CheckMode) (err : IO.FS.Stream) (stride total t0 jobs : N
   -- counted in its title, and the exit waits for it (`drain`).  (After an
   -- accept the summary follows the check phase, and every worker has long
   -- returned.)
-  rep.set do
-    let mut stats := #[]
-    let mut running := 0
-    for t in tasks do
-      if ← IO.hasFinished t then
-        if let .ok st ← IO.wait t then stats := stats.push st
-      else running := running + 1
-    stats := stats.push (← selfStats.get)
-    let name := if running == 0 then "install pool"
-      else s!"install pool ({running} still running, not counted)"
-    let r : PoolRep := { name, workers := jobs,
-                         helper := some "the commit thread", tStart, tEnd, stats }
-    return some r
+  if collectStats then
+    rep.set do
+      let mut stats := #[]
+      let mut running := 0
+      for t in tasks do
+        if ← IO.hasFinished t then
+          if let .ok st ← IO.wait t then stats := stats.push st
+        else running := running + 1
+      stats := stats.push (← selfStats.get)
+      let name := if running == 0 then "install pool"
+        else s!"install pool ({running} still running, not counted)"
+      let r : PoolRep := { name, workers := jobs,
+                           helper := some "the commit thread", tStart, tEnd, stats }
+      return some r
   -- (after a rejection the records past it may never be installed, and
   -- a worker may be waiting on one of their slots)
   ParInstall.stopWorkers sh (res matches .error _)

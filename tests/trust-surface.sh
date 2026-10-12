@@ -315,7 +315,7 @@ LEXER_FIXTURE = 'tests/trust-surface/lexer.lean'
 
 def sources():
     out = []
-    for top in ('ConLeche', 'tests', 'scripts'):
+    for top in ('ConLeche', 'PskernelC1', 'tests', 'scripts'):
         for dp, dirs, fs in os.walk(top):
             dirs[:] = [d for d in dirs if d != '.lake']
             for f in sorted(fs):

@@ -109,6 +109,7 @@ name: CI
 on:
   push:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -119,6 +120,9 @@ concurrency:
 
 jobs:
   build-and-gates:
+    # Pushes validate draft branches; avoid a duplicate cold build on opening
+    # a draft PR. Becoming ready for review runs the normal PR gate.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -143,14 +147,33 @@ jobs:
       # incremental.  The key moves with the source tree; the restore
       # keys let a run start from the previous build of this branch,
       # then of the default branch.
-      - name: Cache .lake
-        uses: actions/cache@v4
+      - name: Restore .lake
+        id: lake-cache
+        uses: actions/cache/restore@v4
         with:
           path: .lake
           key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json') }}-${{ github.sha }}
           restore-keys: |
             lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.toml', 'lake-manifest.json') }}-
             lake-${{ runner.os }}-
+
+      # Source fences are cheap and run before the proof-heavy build. C1's
+      # actual acceptance/model capstones and axiom pins are then built FIRST.
+      # Later targets reuse these outputs; there is no second cold proof build.
+      - name: C1 source and trust boundaries
+        run: |
+          set -euo pipefail
+          python3 tests/c1/source_gate.py
+          bash tests/trust-surface.sh
+
+      - name: C1 model and consistency proofs first (warning-free)
+        run: |
+          set -euo pipefail
+          timeout 10800 lake build PskernelC1Proof PskernelC1Tests 2>&1 | tee c1-proof.log
+          if grep -n 'warning:' c1-proof.log; then
+            echo '::error::C1 proof or axiom audit produced warnings.'
+            exit 1
+          fi
 
       # THE WARNING-FREE RULE (CLAUDE.md: "`lake build` must stay
       # warning-free").  Lake exits 0 on warnings, so the grep is the
@@ -190,6 +213,21 @@ jobs:
             exit 1
           fi
 
+      - name: C1 shipped CLI and optional statistics
+        run: |
+          set -euo pipefail
+          bash tests/c1/verdicts.sh 2>&1 | tee c1-verdicts.log
+          bash tests/pskernel-c1-stats.sh 2>&1 | tee c1-stats.log
+
+      - name: C1 matched resource smoke (verdicts gate, timings advisory)
+        run: |
+          set -euo pipefail
+          python3 tests/c1/perf_smoke.py --repetitions 3 --jobs 1 2>&1 | tee c1-perf.log
+          cat _tmp/c1/perf/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Package the C1 Linux executable
+        run: bash scripts/package-c1.sh
+
       # The standard battery.  It rebuilds nothing of consequence (the
       # step above already did) and runs every gate and suite listed at
       # the top of this file, including the `--trusted` sweep.
@@ -208,4 +246,34 @@ jobs:
             build.log
             test.log
             arena.log
+            c1-proof.log
+            c1-verdicts.log
+            c1-stats.log
+            c1-perf.log
           if-no-files-found: ignore
+
+      - name: Upload C1 executable, provenance and smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pskernel-c1-linux-${{ github.sha }}
+          path: |
+            _tmp/c1/pskernel-c1-linux-x86_64.tar.gz
+            _tmp/c1/source-closure.json
+            _tmp/c1/verdicts
+            _tmp/c1/perf/report.json
+            _tmp/c1/perf/summary.md
+            _tmp/c1/perf/logs
+            lean-toolchain
+            PSKERNEL_C1.md
+          if-no-files-found: ignore
+
+      # Save completed modules even when a later proof, CLI build or gate
+      # fails. A fix restores the partial cache and Lake checks its traces;
+      # the many unchanged foundational proofs need not rebuild from scratch.
+      - name: Save .lake, including partial successful builds
+        if: always() && steps.lake-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .lake
+          key: ${{ steps.lake-cache.outputs.cache-primary-key }}

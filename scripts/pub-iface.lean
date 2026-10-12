@@ -51,6 +51,7 @@ restricted to ours (a prelude constant is reachable from every module).
 
 def ours (m : Name) : Bool :=
   m == `ConLeche || Name.isPrefixOf `ConLeche m || m == `Main || m == `PinDump
+    || m == `PskernelC1 || Name.isPrefixOf `PskernelC1 m
     || m == `ConLecheTests || Name.isPrefixOf `ConLecheTests m
 
 partial def constsOf (e : Expr) (acc : NameSet) : NameSet :=

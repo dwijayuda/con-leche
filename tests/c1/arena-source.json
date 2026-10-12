@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "arena_revision": "0454b9707259b59e18f97a065adbf14f1f61a355",
+  "metadata_url": "https://arena.lean-lang.org/results.json",
+  "archive_url": "https://arena.lean-lang.org/lean-arena-tests.tar.gz",
+  "metadata_sha256": "7f5d9c60430bad574692c9ff05d5c07fb7a43125329d0ac81792d0f638510306",
+  "archive_sha256": "8c70846d4dfd77b0697036fa2d69daf3dbe13e3a9280629cce1dfe9d480ee9a7",
+  "capture_note": "Both file digests were verified by cloud run 38171872724 at source 87ffd9d7. All 196 archive inputs matched their individual metadata hashes and expected outcomes. The actual C1 binary matched 187 verdicts, declined 8 cases and timed out on perf/magma-list-deep-n36 at the stated 60-second limit; 27 metadata cases are absent from the archive. Full corpus, binary and evidence are retained in artifact 11714189593. This records a failed capability/resource qualification, not a full Arena pass. The October 11 publication revision was separately reviewed against its upstream commit; no pin was silently updated."
+}
