@@ -47,25 +47,48 @@ actual registered local-variable type. -/
 theorem inferHeadIn_sound (context : LocalContext) (term type : Expr)
     (accepted : inferHeadIn context term = .inferred type) :
     ContextHeadDerives context term type := by
-  have hh : ∃ inferred, inferHead context.length term = .inferred inferred := by
-    unfold inferHeadIn at accepted
-    cases hc : inferHead context.length term with
-    | inferred inferred => exact ⟨inferred, rfl⟩
-    | invalidScope => simp [hc] at accepted
-    | unsupported => simp [hc] at accepted
-  obtain ⟨inferred, hinfer⟩ := hh
-  have base := inferHead_sound context.length term inferred hinfer
-  cases base with
+  cases term with
   | sort level =>
-    simp [inferHeadIn, hinfer] at accepted
+    have ht : Expr.sort (.succ level) = type := by
+      simpa [inferHeadIn, inferHead, checkScoped] using accepted
     subst type
     exact ContextHeadDerives.sort level
-  | fvar hb hscope =>
-    by_cases hlookup : LocalContext.lookup context index = some inferred
-    · simp [inferHeadIn, hinfer, hlookup] at accepted
-      subst type
-      exact ContextHeadDerives.fvar hlookup hscope
-    · simp [inferHeadIn, hinfer, hlookup] at accepted
+  | fvar index annotation =>
+    by_cases hs : checkScoped 0 context.length (.fvar index annotation) = true
+    · have hparts : index < context.length ∧
+          checkScoped 0 index annotation = true := by
+        simpa [checkScoped, Bool.and_eq_true, decide_eq_true_eq] using hs
+      by_cases hm : LocalContext.lookup context index = some annotation
+      · have ht : annotation = type := by
+          simpa [inferHeadIn, inferHead, hs, hm] using accepted
+        subst type
+        exact ContextHeadDerives.fvar hm
+          (checkScoped_sound annotation 0 index hparts.2)
+      · simp [inferHeadIn, inferHead, hs, hm] at accepted
+    · simp [inferHeadIn, inferHead, hs] at accepted
+  | bvar index =>
+    simp [inferHeadIn, inferHead, checkScoped] at accepted
+  | const name levels =>
+    cases hs : checkScoped 0 context.length (.const name levels) <;>
+      simp [inferHeadIn, inferHead, hs] at accepted
+  | app function argument =>
+    cases hs : checkScoped 0 context.length (.app function argument) <;>
+      simp [inferHeadIn, inferHead, hs] at accepted
+  | lam domain body binder =>
+    cases hs : checkScoped 0 context.length (.lam domain body binder) <;>
+      simp [inferHeadIn, inferHead, hs] at accepted
+  | forallE domain body binder =>
+    cases hs : checkScoped 0 context.length (.forallE domain body binder) <;>
+      simp [inferHeadIn, inferHead, hs] at accepted
+  | letE annotation value body =>
+    cases hs : checkScoped 0 context.length (.letE annotation value body) <;>
+      simp [inferHeadIn, inferHead, hs] at accepted
+  | lit value =>
+    cases hs : checkScoped 0 context.length (.lit value) <;>
+      simp [inferHeadIn, inferHead, hs] at accepted
+  | proj name field value =>
+    cases hs : checkScoped 0 context.length (.proj name field value) <;>
+      simp [inferHeadIn, inferHead, hs] at accepted
 
 /-- Completeness for exactly the two supported, context-justified rules:
 an always-decline implementation would fail this theorem. -/
