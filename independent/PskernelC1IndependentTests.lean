@@ -8,6 +8,8 @@ import PskernelC1Independent.AllSignsTests
 import PskernelC1Independent.ExprTests
 import PskernelC1Independent.ExprSubstTests
 import PskernelC1Independent.ExprAbstractTests
+import PskernelC1Independent.InferHeadTests
+import PskernelC1Independent.InferHeadProofs
 import PskernelC1Independent.ExprAbstractProofs
 import PskernelC1Independent.ExprSubstProofs
 import PskernelC1Independent.ExprProofs
@@ -110,3 +112,9 @@ example (a b : Level) (h : compareFast a b = .equal) : Equivalent a b :=
 #print axioms PskernelC1Independent.Expr.abstractAt_preserves_scope
 #print axioms PskernelC1Independent.Expr.abstract1_preserves_scope
 #print axioms PskernelC1Independent.Expr.checkScoped_abstract1
+
+#print axioms PskernelC1Independent.Expr.Scoped.weakenFVars
+#print axioms PskernelC1Independent.Expr.inferHead_sound
+#print axioms PskernelC1Independent.Expr.inferHead_complete
+#print axioms PskernelC1Independent.Expr.inferHead_iff
+#print axioms PskernelC1Independent.Expr.inferHead_output_scoped
