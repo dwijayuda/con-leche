@@ -21,7 +21,9 @@ if imports != {'ConLeche.Kernel.ExprOps', 'PskernelC1Independent.ExprSubstProofs
                'PskernelC1Independent.ExprAbstractProofs'}:
     raise ValueError(f'unexpected proof bridge imports: {imports}')
 
-EXPECTED = {'scoped_reference_bvars', 'instantiateAt_reference_closed',
+EXPECTED = {'name_roundtrip', 'name_translation_injective',
+            'literal_roundtrip', 'literal_translation_injective',
+            'scoped_reference_bvars', 'instantiateAt_reference_closed',
             'instantiate1_reference_closed', 'instantiate1_checked_reference',
             'abstractAt_reference', 'abstract1_reference'}
 ALLOWED = helper.ALLOWED_AXIOMS

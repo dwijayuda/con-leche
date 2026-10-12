@@ -32,6 +32,27 @@ open PskernelC1Independent
   | .str parent label => .str (nameToReference parent) label
   | .num parent index => .num (nameToReference parent) index
 
+/-- Decode the exact hierarchical name shape back into the
+independent representation. The reference's cached hashes are derived
+fields, not part of the logical name identity. -/
+@[expose] def nameFromReference : ConLeche.Name → Name
+  | .anonymous => .anonymous
+  | .str parent label => .str (nameFromReference parent) label
+  | .num parent index => .num (nameFromReference parent) index
+
+theorem name_roundtrip (name : Name) :
+    nameFromReference (nameToReference name) = name := by
+  induction name <;> simp [nameToReference, nameFromReference, *]
+
+/-- Two distinct independent names can never become the same reference
+constant/structure name through this representation bridge. -/
+theorem name_translation_injective (first second : Name)
+    (same : nameToReference first = nameToReference second) : first = second := by
+  calc
+    first = nameFromReference (nameToReference first) := (name_roundtrip first).symm
+    _ = nameFromReference (nameToReference second) := congrArg nameFromReference same
+    _ = second := name_roundtrip second
+
 /-- Map all five universe constructors under explicit parameter names. -/
 @[expose] def levelToReference (names : Nat → ConLeche.Name) : Level → ConLeche.Level
   | .zero => .zero
@@ -50,6 +71,25 @@ resulting proposition-zero datum remains the responsibility of checking. -/
 @[expose] def literalToReference : Literal → ConLeche.Literal
   | .nat value => .natVal value
   | .str value => .strVal value
+
+/-- Literals are transferred without coercion, string rewriting,
+numeric truncation or implicit decoding. -/
+@[expose] def literalFromReference : ConLeche.Literal → Literal
+  | .natVal value => .nat value
+  | .strVal value => .str value
+
+theorem literal_roundtrip (literal : Literal) :
+    literalFromReference (literalToReference literal) = literal := by
+  cases literal <;> rfl
+
+theorem literal_translation_injective (first second : Literal)
+    (same : literalToReference first = literalToReference second) : first = second := by
+  calc
+    first = literalFromReference (literalToReference first) :=
+      (literal_roundtrip first).symm
+    _ = literalFromReference (literalToReference second) :=
+      congrArg literalFromReference same
+    _ = second := literal_roundtrip second
 
 /-- Pure translation: it never invokes ConLeche's checker or converter. -/
 @[expose] def exprToReference (names : Nat → ConLeche.Name) : Expr → ConLeche.Expr
@@ -217,6 +257,10 @@ theorem abstract1_reference (names : Nat → ConLeche.Name)
 #print axioms abstract1_reference
 
 -- Proof-only cross-implementation audit.
+#print axioms name_roundtrip
+#print axioms name_translation_injective
+#print axioms literal_roundtrip
+#print axioms literal_translation_injective
 #print axioms scoped_reference_bvars
 #print axioms instantiateAt_reference_closed
 #print axioms instantiate1_reference_closed
