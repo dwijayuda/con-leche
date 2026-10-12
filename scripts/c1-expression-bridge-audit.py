@@ -40,8 +40,14 @@ if set(seen) != EXPECTED:
     raise ValueError(f'partial theorem census: {seen}')
 # All six source-level bridge theorems had exactly the standard footprint
 # in cloud run 38195107226; any subsequent change requires explicit review.
+# Exact observed footprints at source 9a58dbb6, run 38195409790.
+EXPECTED_AXIOMS = {name: sorted(ALLOWED) for name in EXPECTED}
+for name in ('name_roundtrip', 'name_translation_injective'):
+    EXPECTED_AXIOMS[name] = ['propext']
+for name in ('literal_roundtrip', 'literal_translation_injective'):
+    EXPECTED_AXIOMS[name] = []
 for name, actual in seen.items():
-    if actual != sorted(ALLOWED):
+    if actual != EXPECTED_AXIOMS[name]:
         raise ValueError(f'changed exact bridge axiom footprint: {name}: {actual}')
 print(json.dumps({'scope': 'expression mapping and closed-substitution refinement',
                   'proofs': seen}, indent=2))
